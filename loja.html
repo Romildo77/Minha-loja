@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2D1B4E">
+<title>Minha Loja de Roupas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --roxo:#2D1B4E;
+    --roxo-claro:#4A2F72;
+    --dourado:#C79A56;
+    --creme:#F7F3ED;
+    --branco:#FFFFFF;
+    --texto:#2B2530;
+    --texto-suave:#7A7285;
+    --verde:#3F7A57;
+    --vermelho:#B5453C;
+    --borda:#E7E0D8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--creme);
+    color:var(--texto);
+    padding-bottom:40px;
+  }
+  header{
+    background:linear-gradient(135deg,var(--roxo),var(--roxo-claro));
+    padding:22px 16px 26px;
+    color:var(--branco);
+    border-radius:0 0 20px 20px;
+    box-shadow:0 4px 14px rgba(45,27,78,.25);
+  }
+  header h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:.3px;
+  }
+  header .sub{
+    font-size:12.5px;
+    opacity:.75;
+    margin-top:3px;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:0 14px;}
+  .card{
+    background:var(--branco);
+    border:1px solid var(--borda);
+    border-radius:14px;
+    padding:16px;
+    margin:14px 0;
+    box-shadow:0 2px 8px rgba(43,37,48,.05);
+  }
+  .card h3{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16px;
+    margin-bottom:12px;
+    color:var(--roxo);
+  }
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--texto-suave);
+    margin-bottom:4px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+  }
+  input,select,textarea{
+    width:100%;
+    padding:11px 12px;
+    margin-bottom:10px;
+    border:1.5px solid var(--borda);
+    border-radius:9px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    background:var(--creme);
+    color:var(--texto);
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;
+    border-color:var(--dourado);
+    background:var(--branco);
+  }
+  textarea{resize:vertical;min-height:50px;}
+  .linha{display:flex;gap:10px;flex-wrap:wrap;}
+  .col{flex:1;min-width:130px;}
+  button{
+    padding:12px 16px;
+    border:none;
+    border-radius:9px;
+    font-weight:700;
+    font-size:14.5px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(.97);}
+  .btn-full{width:100%;}
+  .btn-verde{background:var(--verde);color:#fff;}
+  .btn-roxo{background:var(--roxo);color:#fff;}
+  .btn-dourado{background:var(--dourado);color:#3A2A0F;}
+  .btn-vermelho-out{background:transparent;color:var(--vermelho);border:1.5px solid var(--vermelho);padding:6px 10px;font-size:12.5px;}
+  .nav{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:14px 14px 0;
+    max-width:640px;
+    margin:0 auto;
+  }
+  .nav button{
+    flex:none;
+    background:var(--branco);
+    color:var(--roxo);
+    border:1.5px solid var(--borda);
+    white-space:nowrap;
+    font-size:13.5px;
+    padding:9px 14px;
+  }
+  .nav button.ativo{
+    background:var(--roxo);
+    color:#fff;
+    border-color:var(--roxo);
+  }
+  .aba{display:none;}
+  .aba.ativa{display:block;}
+  .item{
+    border:1px solid var(--borda);
+    border-radius:10px;
+    padding:11px 12px;
+    margin-bottom:8px;
+    background:var(--creme);
+  }
+  .item-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .item b{font-size:14.5px;}
+  .item .meta{font-size:12.5px;color:var(--texto-suave);margin-top:2px;}
+  .tag{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:20px;
+    margin-top:6px;
+    letter-spacing:.3px;
+  }
+  .tag-vista{background:#E4F1E8;color:var(--verde);}
+  .tag-parcelado{background:#FBF0DD;color:#8A6412;}
+  .tag-prazo{background:#FBE7E5;color:var(--vermelho);}
+  .vazio{
+    text-align:center;
+    color:var(--texto-suave);
+    font-size:13.5px;
+    padding:20px 10px;
+  }
+  .stat{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--borda);
+    font-size:14.5px;
+  }
+  .stat:last-child{border:none;font-weight:700;font-size:17px;color:var(--roxo);padding-top:14px;}
+  .stat span:last-child{font-weight:700;}
+  .loading{text-align:center;padding:30px;color:var(--texto-suave);font-size:13.5px;}
+  .senha-row{display:flex;gap:8px;}
+  .senha-row input{margin-bottom:0;}
+  small.hint{color:var(--texto-suave);font-size:11.5px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>🏪 Minha Loja de Roupas</h1>
+    <div class="sub" id="lojaLabel">carregando…</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <label>Escolha a loja</label>
+    <select id="lojaEscolhida" onchange="mudarLoja()">
+      <option value="loja1">Loja 1 — Matriz</option>
+      <option value="loja2">Loja 2</option>
+      <option value="loja3">Loja 3</option>
+      <option value="loja4">Loja 4</option>
+      <option value="loja5">Loja 5</option>
+      <option value="geral" id="opcaoGeral" style="display:none;">📊 Visão geral (todas as lojas)</option>
+    </select>
+    <label style="margin-top:8px;">🔐 Senha do dono (ver todas as lojas)</label>
+    <div class="senha-row">
+      <input type="password" id="senhaAdmin" placeholder="Senha">
+      <button class="btn-dourado" onclick="liberarGeral()">Liberar</button>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="ativo" onclick="irPara('estoque',this)">📦 Estoque</button>
+  <button onclick="irPara('vendas',this)">🛒 Vendas</button>
+  <button onclick="irPara('clientes',this)">👤 Clientes</button>
+  <button onclick="irPara('caixa',this)">💰 Caixa</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ESTOQUE -->
+  <div id="estoque" class="aba ativa">
+    <div class="card">
+      <h3>Cadastrar / entrada de produto</h3>
+      <label>Tipo</label>
+      <select id="tipoProd">
+        <option>Calcinha</option>
+        <option>Lingerie</option>
+        <option>Cueca Adulto</option>
+        <option>Cueca Infantil</option>
+        <option>Pijama Feminino</option>
+        <option>Pijama Masculino</option>
+        <option>Camisa Masculina</option>
+        <option>Calça Masculina</option>
+        <option>Calça Feminina</option>
+        <option>Vestido / Conjunto</option>
+      </select>
+      <div class="linha">
+        <div class="col">
+          <label>Descrição / cor</label>
+          <input type="text" id="descProd" placeholder="ex: azul, estampado">
+        </div>
+        <div class="col">
+          <label>Tamanho</label>
+          <input type="text" id="tamProd" placeholder="P M G GG">
+        </div>
+      </div>
+      <div class="linha">
+        <div class="col">
+          <label>Quantidade</label>
+          <input type="number" id="qtdProd" value="0" min="0">
+        </div>
+        <div class="col">
+          <label>Preço R$</label>
+          <input type="number" step="0.01" id="precoProd" value="0" min="0">
+        </div>
+      </div>
+      <button class="btn-verde btn-full" onclick="salvarProduto()">✅ Salvar produto</button>
+    </div>
+    <div class="card">
+      <h3 id="tituloEstoque">Estoque atual</h3>
+      <div id="listaEstoque"><div class="vazio">Nenhum produto cadastrado ainda.</div></div>
+    </div>
+  </div>
+
+  <!-- VENDAS -->
+  <div id="vendas" class="aba">
+    <div class="card">
+      <h3>Registrar venda</h3>
+      <label>Produto</label>
+      <select id="prodVenda"></select>
+      <div class="linha">
+        <div class="col">
+          <label>Quantidade</label>
+          <input type="number" id="qtdVenda" value="1" min="1">
+        </div>
+        <div class="col">
+          <label>Pagamento</label>
+          <select id="tipoVenda">
+            <option>À VISTA</option>
+            <option>PARCELADO</option>
+            <option>A PRAZO / FIADO</option>
+          </select>
+        </div>
+      </div>
+      <label>Cliente (opcional)</label>
+      <select id="cliVenda"><option value="">— sem cliente —</option></select>
+      <label>Observação</label>
+      <textarea id="obsVenda" placeholder="ex: vence dia 20"></textarea>
+      <button class="btn-verde btn-full" onclick="concluirVenda()">✅ Concluir venda</button>
+    </div>
+    <div class="card">
+      <h3>Histórico de vendas</h3>
+      <div id="listaVendas"><div class="vazio">Nenhuma venda registrada ainda.</div></div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div id="clientes" class="aba">
+    <div class="card">
+      <h3>Cadastrar cliente</h3>
+      <label>Nome completo</label>
+      <input type="text" id="nomeCli" placeholder="Nome">
+      <label>Telefone / WhatsApp</label>
+      <input type="text" id="telCli" placeholder="(00) 00000-0000">
+      <label>Endereço</label>
+      <input type="text" id="endCli" placeholder="Endereço">
+      <button class="btn-verde btn-full" onclick="cadastrarCliente()">✅ Cadastrar</button>
+    </div>
+    <div class="card">
+      <h3>Clientes cadastrados</h3>
+      <div id="listaClientes"><div class="vazio">Nenhum cliente cadastrado ainda.</div></div>
+    </div>
+  </div>
+
+  <!-- CAIXA -->
+  <div id="caixa" class="aba">
+    <div class="card">
+      <h3 id="tituloCaixa">Balanço e caixa</h3>
+      <div class="stat"><span>Vendas à vista</span><span id="valVista">R$ 0,00</span></div>
+      <div class="stat"><span>Vendas parceladas</span><span id="valParcelado">R$ 0,00</span></div>
+      <div class="stat"><span>Vendas a prazo / fiado</span><span id="valPrazo">R$ 0,00</span></div>
+      <div class="stat"><span>Saldo total</span><span id="saldo">R$ 0,00</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const LOJAS = ['loja1','loja2','loja3','loja4','loja5'];
+const SENHA_CERTA = "123456";
+const NOMES_LOJA = {loja1:'Loja 1 — Matriz',loja2:'Loja 2',loja3:'Loja 3',loja4:'Loja 4',loja5:'Loja 5'};
+let lojaAtual = 'loja1';
+let dados = { estoque:{}, vendas:{}, clientes:{} };
+LOJAS.forEach(l=>{ dados.estoque[l]=[]; dados.vendas[l]=[]; dados.clientes[l]=[]; });
+let carregado = false;
+
+async function carregarDados(){
+  try{
+    const r = await window.storage.get('dados-loja', false);
+    if(r && r.value){
+      const salvo = JSON.parse(r.value);
+      LOJAS.forEach(l=>{
+        dados.estoque[l] = salvo.estoque?.[l] || [];
+        dados.vendas[l] = salvo.vendas?.[l] || [];
+        dados.clientes[l] = salvo.clientes?.[l] || [];
+      });
+    }
+  }catch(e){ /* nenhum dado salvo ainda */ }
+  carregado = true;
+  atualizarTela();
+}
+
+async function salvarDados(){
+  try{
+    await window.storage.set('dados-loja', JSON.stringify(dados), false);
+  }catch(e){ console.error('Erro ao salvar', e); }
+}
+
+function fmt(n){ return 'R$ ' + Number(n||0).toFixed(2).replace('.', ','); }
+
+function liberarGeral(){
+  const s = document.getElementById('senhaAdmin').value.trim();
+  if(s === SENHA_CERTA){
+    document.getElementById('opcaoGeral').style.display = 'block';
+    document.getElementById('senhaAdmin').value = '';
+    alert('✅ Acesso liberado! Agora você pode ver todas as lojas.');
+  } else {
+    alert('❌ Senha errada.');
+  }
+}
+
+function mudarLoja(){
+  lojaAtual = document.getElementById('lojaEscolhida').value;
+  atualizarTela();
+}
+
+function irPara(nome, botao){
+  document.querySelectorAll('.aba').forEach(a=>a.classList.remove('ativa'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('ativo'));
+  botao.classList.add('ativo');
+  document.getElementById(nome).classList.add('ativa');
+  atualizarTela();
+}
+
+function lojasAlvo(){
+  return lojaAtual === 'geral' ? LOJAS : [lojaAtual];
+}
+
+function salvarProduto(){
+  if(lojaAtual === 'geral'){ alert('Selecione uma loja específica para cadastrar produtos.'); return; }
+  const p = {
+    tipo: document.getElementById('tipoProd').value,
+    desc: document.getElementById('descProd').value.trim(),
+    tam: document.getElementById('tamProd').value.trim(),
+    qtd: Number(document.getElementById('qtdProd').value),
+    preco: Number(document.getElementById('precoProd').value)
+  };
+  if(p.qtd < 0 || p.preco < 0){ alert('Quantidade e preço não podem ser negativos.'); return; }
+  const achou = dados.estoque[lojaAtual].find(i=>i.tipo===p.tipo && i.desc===p.desc && i.tam===p.tam);
+  if(achou){ achou.qtd += p.qtd; achou.preco = p.preco; }
+  else dados.estoque[lojaAtual].push(p);
+  salvarDados();
+  document.getElementById('descProd').value='';
+  document.getElementById('tamProd').value='';
+  document.getElementById('qtdProd').value='0';
+  document.getElementById('precoProd').value='0';
+  alert('✅ Produto salvo!');
+  atualizarTela();
+}
+
+function excluirProd(loja, i){
+  if(confirm('Excluir esse produto?')){
+    dados.estoque[loja].splice(i,1);
+    salvarDados();
+    atualizarTela();
+  }
+}
+
+function excluirCliente(loja, i){
+  if(confirm('Excluir esse cliente?')){
+    dados.clientes[loja].splice(i,1);
+    salvarDados();
+    atualizarTela();
+  }
+}
+
+function cadastrarCliente(){
+  if(lojaAtual === 'geral'){ alert('Selecione uma loja específica para cadastrar clientes.'); return; }
+  const nome = document.getElementById('nomeCli').value.trim();
+  if(!nome){ alert('Informe o nome do cliente.'); return; }
+  const c = {
+    nome,
+    tel: document.getElementById('telCli').value.trim(),
+    end: document.getElementById('endCli').value.trim()
+  };
+  dados.clientes[lojaAtual].push(c);
+  salvarDados();
+  document.getElementById('nomeCli').value='';
+  document.getElementById('telCli').value='';
+  document.getElementById('endCli').value='';
+  alert('✅ Cliente cadastrado!');
+  atualizarTela();
+}
+
+function concluirVenda(){
+  if(lojaAtual === 'geral'){ alert('Selecione uma loja específica para registrar vendas.'); return; }
+  const idx = Number(document.getElementById('prodVenda').value);
+  const qtd = Number(document.getElementById('qtdVenda').value);
+  const estoqueLoja = dados.estoque[lojaAtual];
+  if(isNaN(idx) || !estoqueLoja[idx]){ alert('Selecione um produto.'); return; }
+  const produto = estoqueLoja[idx];
+  if(qtd <= 0){ alert('Quantidade inválida.'); return; }
+  if(qtd > produto.qtd){ alert('Estoque insuficiente. Disponível: ' + produto.qtd); return; }
+
+  const clienteIdx = document.getElementById('cliVenda').value;
+  const cliente = clienteIdx !== '' ? dados.clientes[lojaAtual][Number(clienteIdx)]?.nome : '';
+
+  const venda = {
+    tipo: produto.tipo, desc: produto.desc, tam: produto.tam,
+    qtd, precoUnit: produto.preco, total: qtd * produto.preco,
+    pagamento: document.getElementById('tipoVenda').value,
+    cliente: cliente || '',
+    obs: document.getElementById('obsVenda').value.trim(),
+    data: new Date().toLocaleString('pt-BR')
+  };
+
+  produto.qtd -= qtd;
+  if(produto.qtd === 0) estoqueLoja.splice(estoqueLoja.indexOf(produto),1);
+  dados.vendas[lojaAtual].unshift(venda);
+  salvarDados();
+
+  document.getElementById('qtdVenda').value='1';
+  document.getElementById('obsVenda').value='';
+  alert('✅ Venda registrada! Estoque atualizado.');
+  atualizarTela();
+}
+
+function renderEstoque(){
+  const div = document.getElementById('listaEstoque');
+  const titulo = document.getElementById('tituloEstoque');
+  div.innerHTML = '';
+
+  if(lojaAtual === 'geral'){
+    titulo.textContent = '📈 Estoque geral — todas as lojas';
+    const totalGeral = {};
+    LOJAS.forEach(l=>{
+      dados.estoque[l].forEach(p=>{
+        const id = p.tipo+'|'+p.desc+'|'+p.tam;
+        if(!totalGeral[id]) totalGeral[id] = {...p, qtd:0, porLoja:{}};
+        totalGeral[id].qtd += p.qtd;
+        totalGeral[id].porLoja[l] = p.qtd;
+      });
+    });
+    const chaves = Object.keys(totalGeral);
+    if(chaves.length===0){ div.innerHTML = '<div class="vazio">Nenhum produto cadastrado em nenhuma loja.</div>'; return; }
+    chaves.forEach(k=>{
+      const x = totalGeral[k];
+      const porLoja = Object.entries(x.porLoja).map(([l,q])=>NOMES_LOJA[l].split(' — ')[0]+': '+q).join(' · ');
+      div.innerHTML += `<div class="item">
+        <div class="item-topo"><b>${x.tipo}</b><span class="meta">${fmt(x.preco)}</span></div>
+        <div class="meta">${x.desc||'—'} · Tam. ${x.tam||'—'}</div>
+        <div class="meta">Total: <b>${x.qtd}</b> un.</div>
+        <small class="hint">${porLoja}</small>
+      </div>`;
+    });
+  } else {
+    titulo.textContent = 'Estoque — ' + NOMES_LOJA[lojaAtual];
+    const lista = dados.estoque[lojaAtual];
+    if(lista.length===0){ div.innerHTML = '<div class="vazio">Nenhum produto cadastrado ainda.</div>'; return; }
+    lista.forEach((p,i)=>{
+      div.innerHTML += `<div class="item">
+        <div class="item-topo">
+          <div><b>${p.tipo}</b><div class="meta">${p.desc||'—'} · Tam. ${p.tam||'—'}</div></div>
+          <button class="btn-vermelho-out" onclick="excluirProd('${lojaAtual}',${i})">Excluir</button>
+        </div>
+        <div class="meta">Qtd: <b>${p.qtd}</b> · ${fmt(p.preco)}</div>
+      </div>`;
+    });
+  }
+}
+
+function renderVendaForm(){
+  const selProd = document.getElementById('prodVenda');
+  const selCli = document.getElementById('cliVenda');
+  if(lojaAtual === 'geral'){
+    selProd.innerHTML = '<option value="">Selecione uma loja específica</option>';
+    selCli.innerHTML = '<option value="">Selecione uma loja específica</option>';
+    return;
+  }
+  const estoqueLoja = dados.estoque[lojaAtual];
+  selProd.innerHTML = estoqueLoja.length
+    ? estoqueLoja.map((p,i)=>`<option value="${i}">${p.tipo} — ${p.desc||'—'} · ${p.tam||'—'} (${p.qtd} un. · ${fmt(p.preco)})</option>`).join('')
+    : '<option value="">Nenhum produto em estoque</option>';
+  const clientesLoja = dados.clientes[lojaAtual];
+  selCli.innerHTML = '<option value="">— sem cliente —</option>' +
+    clientesLoja.map((c,i)=>`<option value="${i}">${c.nome}</option>`).join('');
+}
+
+function renderVendas(){
+  const div = document.getElementById('listaVendas');
+  div.innerHTML = '';
+  let vendas = [];
+  if(lojaAtual === 'geral'){
+    LOJAS.forEach(l=> vendas.push(...dados.vendas[l].map(v=>({...v, loja:NOMES_LOJA[l].split(' — ')[0]}))));
+  } else {
+    vendas = dados.vendas[lojaAtual];
+  }
+  if(vendas.length===0){ div.innerHTML = '<div class="vazio">Nenhuma venda registrada ainda.</div>'; return; }
+  const tagClasse = p => p==='À VISTA' ? 'tag-vista' : p==='PARCELADO' ? 'tag-parcelado' : 'tag-prazo';
+  vendas.slice(0,50).forEach(v=>{
+    div.innerHTML += `<div class="item">
+      <div class="item-topo"><b>${v.tipo} — ${v.desc||'—'} (${v.tam||'—'})</b><span class="meta">${fmt(v.total)}</span></div>
+      <div class="meta">${v.qtd}× ${fmt(v.precoUnit)} ${v.loja?('· '+v.loja):''} ${v.cliente?('· '+v.cliente):''}</div>
+      <div class="meta">${v.data}</div>
+      ${v.obs?`<small class="hint">${v.obs}</small><br>`:''}
+      <span class="tag ${tagClasse(v.pagamento)}">${v.pagamento}</span>
+    </div>`;
+  });
+}
+
+function renderClientes(){
+  const div = document.getElementById('listaClientes');
+  div.innerHTML = '';
+  if(lojaAtual === 'geral'){
+    let todos = [];
+    LOJAS.forEach(l=> todos.push(...dados.clientes[l].map(c=>({...c, loja:NOMES_LOJA[l].split(' — ')[0]}))));
+    if(todos.length===0){ div.innerHTML = '<div class="vazio">Nenhum cliente cadastrado.</div>'; return; }
+    todos.forEach(c=>{
+      div.innerHTML += `<div class="item">
+        <b>${c.nome}</b><div class="meta">${c.tel||'sem telefone'} · ${c.loja}</div>
+        ${c.end?`<div class="meta">${c.end}</div>`:''}
+      </div>`;
+    });
+  } else {
+    const lista = dados.clientes[lojaAtual];
+    if(lista.length===0){ div.innerHTML = '<div class="vazio">Nenhum cliente cadastrado ainda.</div>'; return; }
+    lista.forEach((c,i)=>{
+      div.innerHTML += `<div class="item">
+        <div class="item-topo">
+          <div><b>${c.nome}</b><div class="meta">${c.tel||'sem telefone'}</div></div>
+          <button class="btn-vermelho-out" onclick="excluirCliente('${lojaAtual}',${i})">Excluir</button>
+        </div>
+        ${c.end?`<div class="meta">${c.end}</div>`:''}
+      </div>`;
+    });
+  }
+}
+
+function renderCaixa(){
+  document.getElementById('tituloCaixa').textContent =
+    lojaAtual === 'geral' ? 'Balanço e caixa — todas as lojas' : 'Balanço e caixa — ' + NOMES_LOJA[lojaAtual];
+  let vendas = [];
+  lojasAlvo().forEach(l=> vendas.push(...dados.vendas[l]));
+  let vista=0, parcelado=0, prazo=0;
+  vendas.forEach(v=>{
+    if(v.pagamento==='À VISTA') vista += v.total;
+    else if(v.pagamento==='PARCELADO') parcelado += v.total;
+    else prazo += v.total;
+  });
+  document.getElementById('valVista').textContent = fmt(vista);
+  document.getElementById('valParcelado').textContent = fmt(parcelado);
+  document.getElementById('valPrazo').textContent = fmt(prazo);
+  document.getElementById('saldo').textContent = fmt(vista+parcelado+prazo);
+}
+
+function atualizarTela(){
+  if(!carregado) return;
+  document.getElementById('lojaLabel').textContent =
+    lojaAtual === 'geral' ? 'Visão geral · todas as lojas' : NOMES_LOJA[lojaAtual];
+  renderEstoque();
+  renderVendaForm();
+  renderVendas();
+  renderClientes();
+  renderCaixa();
+}
+
+carregarDados();
+</script>
+</body>
+</html>
