@@ -1,4 +1,4 @@
-const CACHE = 'loja-vendedor-v1';
+const CACHE = 'loja-vendedor-v2';
 const ARQUIVOS = ['./loja-vendedor.html', './manifest-vendedor.json', './icon-vendedor-192.png', './icon-vendedor-512.png'];
 
 self.addEventListener('install', (evento) => {
@@ -15,6 +15,7 @@ self.addEventListener('activate', (evento) => {
 
 self.addEventListener('fetch', (evento) => {
     if (evento.request.method !== 'GET') return;
+    if (new URL(evento.request.url).origin !== self.location.origin) return;
     evento.respondWith(
         fetch(evento.request).then(resposta => {
             const copia = resposta.clone();

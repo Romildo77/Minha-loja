@@ -1,4 +1,4 @@
-const CACHE = 'loja-matriz-v1';
+const CACHE = 'loja-matriz-v2';
 const ARQUIVOS = ['./loja-profissional.html', './manifest.json', './icon-matriz-192.png', './icon-matriz-512.png'];
 
 self.addEventListener('install', (evento) => {
@@ -15,8 +15,11 @@ self.addEventListener('activate', (evento) => {
 
 // Tenta buscar na internet primeiro (pra sempre pegar dados atualizados);
 // se não tiver conexão, usa a última versão salva - assim o app abre mesmo sem internet.
+// IMPORTANTE: só mexe nos arquivos do PRÓPRIO site. Nunca intercepta pedidos pro Firebase/Firestore
+// (que são de outro endereço), pra não atrapalhar a atualização em tempo real dos dados.
 self.addEventListener('fetch', (evento) => {
     if (evento.request.method !== 'GET') return;
+    if (new URL(evento.request.url).origin !== self.location.origin) return;
     evento.respondWith(
         fetch(evento.request).then(resposta => {
             const copia = resposta.clone();
