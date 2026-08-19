@@ -1,13 +1,14 @@
 {
-  "name": "Minha Loja de Roupas",
-  "short_name": "Minha Loja",
-  "start_url": "./index.html",
+  "name": "Loja Profissional — Matriz",
+  "short_name": "Loja Matriz",
+  "description": "Controle de estoque, vendas e cobranças da loja",
+  "start_url": "./loja-profissional.html",
   "display": "standalone",
-  "background_color": "#F7F3ED",
-  "theme_color": "#2D1B4E",
   "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#0D47A1",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icon-matriz-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-matriz-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
