@@ -121,6 +121,7 @@
     <div class="item-menu" onclick="irPara('nova-venda')"><span>➕</span> Nova Venda</div>
     <div class="item-menu" onclick="irPara('estoque')"><span>📦</span> Meu Estoque</div>
     <div class="item-menu" onclick="irPara('cobrancas')"><span>📅</span> Vendas a Prazo / A Receber</div>
+    <div class="item-menu" onclick="irPara('vista')"><span>💵</span> Vendas à Vista</div>
     <div class="item-menu" onclick="irPara('quitados')"><span>✅</span> Quem Já Pagou</div>
     <div class="item-menu" onclick="irPara('relatorio')"><span>📊</span> Relatório</div>
     <div class="item-menu" onclick="irPara('configuracoes')"><span>⚙️</span> Configurações</div>
@@ -233,6 +234,14 @@
     <div class="card">
         <h3 class="font-bold mb-3">📋 Meu Estoque Atual</h3>
         <div id="lista-estoque"></div>
+    </div>
+</div>
+<!-- 💵 VENDAS À VISTA -->
+<div id="vista" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-green-700 mb-4">💵 Vendas à Vista</h2>
+        <p class="text-sm text-gray-600 mb-3">Inclui as vendas feitas pelo app do vendedor. Ative o Modo Edição em Configurações pra excluir alguma.</p>
+        <div id="lista-vista"></div>
     </div>
 </div>
 <!-- 💰 VENDAS A PRAZO / A RECEBER -->
@@ -1187,6 +1196,39 @@ function atualizarTela(){
             </div>` : ''}
         </div>`;
     });
+
+    // Mostra Vendas à Vista (inclui as feitas pelo app do vendedor), mais recentes primeiro
+    let listaVista = document.getElementById('lista-vista');
+    if(listaVista){
+        listaVista.innerHTML = '';
+        let vendasVista = dados.vendas.filter(v=>v.tipoPagamento==='vista').sort((a,b)=>b.id-a.id);
+        if(vendasVista.length===0){
+            listaVista.innerHTML = `<div class="vazio"><span>💵</span>Nenhuma venda à vista registrada ainda.</div>`;
+        }
+        vendasVista.forEach(v=>{
+            let iniciais = v.cliente.nome.trim().split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+            let dataVendaFmt = v.dataVenda ? new Date(v.dataVenda+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+            listaVista.innerHTML += `
+            <div class="card">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="linha-cliente" style="flex:1;">
+                        <div class="avatar">${iniciais}</div>
+                        <div>
+                            <b>${v.cliente.nome}</b>${v.cliente.apelido?` <span class="text-sm text-gray-500">"${v.cliente.apelido}"</span>`:''}
+                            <div class="detalhe">${v.produto} — Qtd: ${v.quantidade}</div>
+                        </div>
+                    </div>
+                    ${modoEdicao ? `<div class="flex gap-2">
+                        <button class="btn-excluir" onclick="excluirVenda(${v.id})" title="Excluir venda"><span>🗑️</span></button>
+                    </div>` : ''}
+                </div>
+                <div class="mt-2">
+                    <div>Valor total: <b>R$ ${v.valorTotal.toFixed(2)}</b></div>
+                    <div class="detalhe">Venda: ${dataVendaFmt}</div>
+                </div>
+            </div>`;
+        });
+    }
 
     // Mostra Quem Já Pagou (vendas a prazo totalmente quitadas)
     let listaQuit = document.getElementById('lista-quitados');
