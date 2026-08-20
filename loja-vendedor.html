@@ -15,6 +15,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {--cor-principal:#2E7D32; --cor-principal-clara:#43A047; --cor-prazo:#7B1FA2; --cor-alerta:#F57F17; --cor-vencido:#C62828; --cor-fundo:#f4f6fb; --cor-texto:#1e293b; --cor-borda:#e2e8f0;}
@@ -56,9 +57,28 @@
         .item-venda-recente {padding:12px 0; border-bottom:1px solid #f1f5f9; font-size:14px;}
         .item-venda-recente:last-child {border-bottom:none;}
         .detalhe {font-size:13px; color:#64748b;}
+        .tela-login {position:fixed; inset:0; z-index:900; background:linear-gradient(135deg,#1B5E20,#2E7D32); display:flex; align-items:center; justify-content:center; padding:24px;}
+        .tela-login.oculto {display:none;}
+        .caixa-login {background:#fff; border-radius:20px; padding:32px 24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+        .caixa-login h1 {font-size:20px; font-weight:800; color:var(--cor-principal); text-align:center; margin-bottom:4px;}
+        .caixa-login p {text-align:center; color:#64748b; font-size:13px; margin-bottom:20px;}
+        .caixa-login input {width:100%; padding:13px; margin-bottom:12px; border:1.5px solid var(--cor-borda); border-radius:10px; font-size:15px;}
+        .caixa-login .erro-login {color:#C62828; font-size:13px; text-align:center; min-height:18px; margin-bottom:6px;}
+        .oculto {display:none;}
     </style>
 </head>
 <body>
+<div class="tela-login" id="telaLogin">
+    <div class="caixa-login">
+        <h1>🔒 LOJA — VENDAS</h1>
+        <p>Entre com o login que a matriz criou pra você</p>
+        <div class="erro-login" id="erroLogin"></div>
+        <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button class="btn btn-sucesso" onclick="fazerLogin()" id="btn-login">Entrar</button>
+    </div>
+</div>
+<div id="appConteudo" class="oculto">
 <div id="toasts"></div>
 <header>
     <div>
@@ -162,6 +182,10 @@
         <p class="detalhe mb-2">Só para conferência — aqui não dá pra editar nem excluir.</p>
         <div id="lista-recentes"></div>
     </div>
+    <div class="card">
+        <button class="btn btn-cancelar" onclick="sair()">🚪 Sair</button>
+    </div>
+</div>
 </div>
 
 <div class="modal-confirmar oculto" id="modalPix">
@@ -199,6 +223,48 @@ try {
     }
 } catch (e) {
     db = null;
+}
+
+// ---------- Login (Firebase Authentication) ----------
+function fazerLogin(){
+    let email = document.getElementById('login-email').value.trim();
+    let senha = document.getElementById('login-senha').value;
+    let erroEl = document.getElementById('erroLogin');
+    erroEl.textContent = '';
+    if(!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; return; }
+    if (typeof firebase === 'undefined' || !firebase.auth) { erroEl.textContent = 'Sem conexão — não é possível entrar agora.'; return; }
+    let btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+        .catch(e=>{
+            let msgs = {
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/user-not-found':'Não existe login com esse e-mail. Peça pra matriz criar seu acesso.',
+                'auth/wrong-password':'Senha incorreta.',
+                'auth/invalid-credential':'E-mail ou senha incorretos.',
+                'auth/too-many-requests':'Muitas tentativas erradas. Espere um pouco e tente de novo.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível entrar. Tente novamente.';
+        })
+        .finally(()=>{ btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function sair(){
+    if(firebase.auth) firebase.auth().signOut();
+}
+
+let appJaIniciado = false;
+if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged(user=>{
+        if(user){
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('appConteudo').classList.remove('oculto');
+            if(!appJaIniciado){ appJaIniciado = true; iniciarApp(); }
+        } else {
+            document.getElementById('appConteudo').classList.add('oculto');
+            document.getElementById('telaLogin').classList.remove('oculto');
+        }
+    });
 }
 
 function mostrarToast(msg, tipo='sucesso'){
@@ -560,7 +626,7 @@ function atualizarTela(){
     renderizarPixVendedor();
 }
 
-window.onload = () => {
+function iniciarApp(){
     if (!db) {
         definirStatusConexao(false);
         mostrarToast('Não consegui conectar à matriz. Verifique a internet e abra o app de novo.', 'erro');
@@ -577,7 +643,7 @@ window.onload = () => {
         },
         () => { definirStatusConexao(false); }
     );
-};
+}
 
 if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{

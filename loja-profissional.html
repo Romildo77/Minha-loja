@@ -16,12 +16,20 @@
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {--cor-principal:#0D47A1; --cor-principal-clara:#1976D2; --cor-sucesso:#2E7D32; --cor-prazo:#7B1FA2; --cor-alerta:#F57F17; --cor-vencido:#C62828; --cor-fundo:#f4f6fb; --cor-texto:#1e293b; --cor-borda:#e2e8f0;}
         * {margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, sans-serif;}
         body {background:var(--cor-fundo); color:var(--cor-texto); padding-bottom:90px; line-height:1.6;}
         .card {background:#fff; border-radius:16px; padding:20px; margin:12px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border:1px solid var(--cor-borda);}
+        .tela-login {position:fixed; inset:0; z-index:900; background:linear-gradient(135deg,#0D47A1,#1976D2); display:flex; align-items:center; justify-content:center; padding:24px;}
+        .tela-login.oculto {display:none;}
+        .caixa-login {background:#fff; border-radius:20px; padding:32px 24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+        .caixa-login h1 {font-size:20px; font-weight:800; color:var(--cor-principal); text-align:center; margin-bottom:4px;}
+        .caixa-login p {text-align:center; color:#64748b; font-size:13px; margin-bottom:20px;}
+        .caixa-login input {width:100%; padding:13px; margin-bottom:12px; border:1.5px solid var(--cor-borda); border-radius:10px; font-size:15px;}
+        .caixa-login .erro-login {color:#C62828; font-size:13px; text-align:center; min-height:18px; margin-bottom:6px;}
         .secao-titulo {font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin:18px 0 8px; display:flex; align-items:center; gap:8px;}
         .secao-titulo:first-child {margin-top:0;}
         .btn {border-radius:10px; padding:14px; font-weight:600; border:none; cursor:pointer; width:100%; font-size:16px; margin:5px 0; transition:transform .1s;}
@@ -88,6 +96,17 @@
     </style>
 </head>
 <body>
+<div class="tela-login" id="telaLogin">
+    <div class="caixa-login">
+        <h1>🔒 LOJA PROFISSIONAL</h1>
+        <p>Acesso restrito ao dono da loja</p>
+        <div class="erro-login" id="erroLogin"></div>
+        <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button class="btn btn-principal" onclick="fazerLogin()" id="btn-login">Entrar</button>
+    </div>
+</div>
+<div id="appConteudo" class="oculto">
 <div id="toasts"></div>
 <div class="modal-confirmar oculto" id="modalConfirmar">
     <div class="modal-caixa">
@@ -308,6 +327,23 @@
         <div id="lista-pix"></div>
         <button class="btn btn-principal mt-2" onclick="adicionarChavePixNova()">➕ Adicionar chave Pix</button>
     </div>
+    <div class="card">
+        <h3 class="font-bold mb-1">👥 Vendedores</h3>
+        <p class="detalhe mb-2">Crie o login (e-mail e senha) que cada vendedor vai usar no app dele.</p>
+        <div id="lista-vendedores"></div>
+        <div class="erro-login" id="erro-novo-vendedor"></div>
+        <label class="campo">Nome do vendedor</label>
+        <input type="text" id="nv-nome" placeholder="Nome de quem vai vender">
+        <label class="campo">E-mail de login</label>
+        <input type="email" id="nv-email" placeholder="email@exemplo.com">
+        <label class="campo">Senha (mínimo 6 caracteres)</label>
+        <input type="text" id="nv-senha" placeholder="Senha de acesso">
+        <button class="btn btn-principal mt-2" onclick="criarVendedor()" id="btn-criar-vendedor">➕ Criar login do vendedor</button>
+    </div>
+    <div class="card">
+        <button class="btn btn-cancelar" onclick="sair()">🚪 Sair da conta</button>
+    </div>
+</div>
 </div>
 </div>
 <script>
@@ -339,6 +375,113 @@ try {
     }
 } catch (e) {
     db = null;
+}
+
+// ---------- Login (Firebase Authentication) ----------
+function fazerLogin(){
+    let email = document.getElementById('login-email').value.trim();
+    let senha = document.getElementById('login-senha').value;
+    let erroEl = document.getElementById('erro-login') || document.getElementById('erroLogin');
+    erroEl.textContent = '';
+    if(!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; return; }
+    if (typeof firebase === 'undefined' || !firebase.auth) { erroEl.textContent = 'Sem conexão — não é possível entrar agora.'; return; }
+    let btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+        .catch(e=>{
+            let msgs = {
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/user-not-found':'Não existe login com esse e-mail.',
+                'auth/wrong-password':'Senha incorreta.',
+                'auth/invalid-credential':'E-mail ou senha incorretos.',
+                'auth/too-many-requests':'Muitas tentativas erradas. Espere um pouco e tente de novo.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível entrar. Tente novamente.';
+        })
+        .finally(()=>{ btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function sair(){
+    if(firebase.auth) firebase.auth().signOut();
+}
+
+// Cria o login de um novo vendedor sem tirar o dono da loja da própria conta:
+// usa uma segunda instância "invisível" do Firebase só pra esse cadastro.
+function criarVendedor(){
+    let nome = document.getElementById('nv-nome').value.trim();
+    let email = document.getElementById('nv-email').value.trim();
+    let senha = document.getElementById('nv-senha').value;
+    let erroEl = document.getElementById('erro-novo-vendedor');
+    erroEl.textContent = '';
+    if(!nome || !email || !senha) { erroEl.textContent = 'Preencha nome, e-mail e senha.'; return; }
+    if(senha.length < 6) { erroEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+
+    let btn = document.getElementById('btn-criar-vendedor');
+    btn.disabled = true; btn.textContent = 'Criando...';
+
+    let nomeApp = 'appSecundario_'+Date.now();
+    let appSecundario = firebase.initializeApp(firebaseConfig, nomeApp);
+    appSecundario.auth().createUserWithEmailAndPassword(email, senha)
+        .then(()=>{
+            dados.vendedores = dados.vendedores || [];
+            dados.vendedores.push({ nome, email, criadoEm: hojeISO() });
+            salvar();
+            renderizarVendedores();
+            document.getElementById('nv-nome').value='';
+            document.getElementById('nv-email').value='';
+            document.getElementById('nv-senha').value='';
+            mostrarToast('Login do vendedor criado! Passe esse e-mail e senha pra ele.', 'sucesso');
+        })
+        .catch(e=>{
+            let msgs = {
+                'auth/email-already-in-use':'Já existe um login com esse e-mail.',
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/weak-password':'Senha muito fraca — use pelo menos 6 caracteres.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível criar o login.';
+        })
+        .finally(()=>{
+            btn.disabled = false; btn.textContent = '➕ Criar login do vendedor';
+            appSecundario.auth().signOut().catch(()=>{});
+            appSecundario.delete().catch(()=>{});
+        });
+}
+
+function renderizarVendedores(){
+    let lista = document.getElementById('lista-vendedores');
+    if(!lista) return;
+    let vendedores = dados.vendedores || [];
+    if(vendedores.length===0){
+        lista.innerHTML = `<div class="vazio">Nenhum vendedor cadastrado ainda.</div>`;
+        return;
+    }
+    lista.innerHTML = vendedores.map((v,i)=>`
+        <div class="item-pix-vendedor">
+            <div><b>${v.nome}</b><div class="detalhe">${v.email}</div></div>
+            <button class="btn-excluir" onclick="removerVendedorDaLista(${i})" title="Remover da lista"><span>🗑️</span></button>
+        </div>`).join('') +
+        `<p class="detalhe" style="margin-top:8px;">⚠️ Isso remove só da listinha aqui. Pra bloquear o acesso dele de verdade, exclua o e-mail em: console.firebase.google.com → Authentication → Users.</p>`;
+}
+
+function removerVendedorDaLista(i){
+    dados.vendedores.splice(i,1);
+    salvar();
+    renderizarVendedores();
+}
+
+// Só libera o app depois de confirmar o login. Enquanto não sabe se está logado,
+// mantém a tela de carregamento (login) visível pra não piscar conteúdo indevido.
+if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged(user=>{
+        if(user){
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('appConteudo').classList.remove('oculto');
+            iniciarApp();
+        } else {
+            document.getElementById('appConteudo').classList.add('oculto');
+            document.getElementById('telaLogin').classList.remove('oculto');
+        }
+    });
 }
 
 // ---------- Avisos profissionais (substituem os alert()) ----------
@@ -483,6 +626,7 @@ function normalizarDados(){
             {id:2, nome:'Romildo Silva dos Santos', tipo:'cnpj', chave:'66611053000157', cidade:'BRASIL'}
         ];
     }
+    dados.vendedores = dados.vendedores || [];
 }
 
 // Máscara simples de WhatsApp: (00) 00000-0000
@@ -1065,6 +1209,7 @@ function linkWhatsApp(v){
 }
 
 function atualizarTela(){
+    renderizarVendedores();
     // Lista produtos na venda
     let selProd = document.getElementById('produto-venda'); selProd.innerHTML='';
     dados.estoque.filter(p=>p.quantidade>0).forEach(p=>selProd.innerHTML += `<option value="${p.id}">${p.tipo} ${p.descricao} ${p.tamanho} — R$${p.precoUnitario.toFixed(2)}</option>`);
@@ -1301,7 +1446,11 @@ function salvar(){
         });
 }
 
-window.onload = () => {
+let appJaIniciado = false;
+function iniciarApp(){
+    if(appJaIniciado) return;
+    appJaIniciado = true;
+
     modoEdicao = localStorage.getItem('modoEdicaoAtivo') === '1';
     let chk = document.getElementById('chk-modo-edicao');
     if(chk) chk.checked = modoEdicao;
