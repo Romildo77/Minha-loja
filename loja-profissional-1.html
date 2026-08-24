@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Loja Profissional">
+    <meta name="theme-color" content="#0D47A1">
+    <title>Loja Profissional — Vendas e Prazos</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Loja Matriz">
+    <link rel="apple-touch-icon" href="icon-matriz-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {--cor-principal:#0D47A1; --cor-principal-clara:#1976D2; --cor-sucesso:#2E7D32; --cor-prazo:#7B1FA2; --cor-alerta:#F57F17; --cor-vencido:#C62828; --cor-fundo:#f4f6fb; --cor-texto:#1e293b; --cor-borda:#e2e8f0;}
+        * {margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, sans-serif;}
+        body {background:var(--cor-fundo); color:var(--cor-texto); padding-bottom:90px; line-height:1.6;}
+        .card {background:#fff; border-radius:16px; padding:20px; margin:12px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border:1px solid var(--cor-borda);}
+        .item-carrinho {display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:#f8fafc; border-radius:10px; margin-top:8px; border:1px solid var(--cor-borda);}
+        .item-carrinho .btn-remover-item {background:none; border:none; color:#C62828; font-size:18px; cursor:pointer; padding:4px 8px;}
+        .tela-login {position:fixed; inset:0; z-index:900; background:linear-gradient(135deg,#0D47A1,#1976D2); display:flex; align-items:center; justify-content:center; padding:24px;}
+        .tela-login.oculto {display:none;}
+        .caixa-login {background:#fff; border-radius:20px; padding:32px 24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+        .caixa-login h1 {font-size:20px; font-weight:800; color:var(--cor-principal); text-align:center; margin-bottom:4px;}
+        .caixa-login p {text-align:center; color:#64748b; font-size:13px; margin-bottom:20px;}
+        .caixa-login input {width:100%; padding:13px; margin-bottom:12px; border:1.5px solid var(--cor-borda); border-radius:10px; font-size:15px;}
+        .caixa-login .erro-login {color:#C62828; font-size:13px; text-align:center; min-height:18px; margin-bottom:6px;}
+        .secao-titulo {font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin:18px 0 8px; display:flex; align-items:center; gap:8px;}
+        .secao-titulo:first-child {margin-top:0;}
+        .btn {border-radius:10px; padding:14px; font-weight:600; border:none; cursor:pointer; width:100%; font-size:16px; margin:5px 0; transition:transform .1s;}
+        .btn:active {transform:scale(0.98);}
+        .btn-sucesso {background:linear-gradient(135deg, #2E7D32, #388E3C); color:white;}
+        .btn-principal {background:linear-gradient(135deg, #0D47A1, #1976D2); color:white;}
+        .btn-alerta {background:linear-gradient(135deg, #F57F17, #FB8C00); color:white;}
+        .btn-whats {background:linear-gradient(135deg, #1DA851, #25D366); color:white; font-size:14px; padding:10px; display:flex; align-items:center; justify-content:center; gap:8px;}
+        input,select,textarea {width:100%; padding:13px; margin:6px 0; border:1px solid #cbd5e1; border-radius:10px; font-size:15px; background:#fbfcfe;}
+        input:focus,select:focus,textarea:focus {outline:none; border-color:var(--cor-principal); background:white; box-shadow:0 0 0 3px rgba(13,71,161,0.08);}
+        label.campo {font-size:12px; font-weight:600; color:#64748b; margin:4px 2px -2px; display:block;}
+        .linha {display:flex; gap:12px; flex-wrap:wrap;}
+        .col {flex:1; min-width:140px;}
+        .col-sm {flex:0 0 100px;}
+        .aba {display:none; animation:aparecer 0.3s ease;}
+        .aba.ativa {display:block;}
+        .menu-lateral {position:fixed; top:0; left:-100%; width:300px; height:100%; background:white; z-index:200; padding:25px; box-shadow:4px 0 15px rgba(0,0,0,0.15); transition:0.3s; border-radius:0 20px 20px 0;}
+        .menu-lateral.aberto {left:0;}
+        .fundo-escuro {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:190; display:none;}
+        .item-menu {padding:16px; border-radius:10px; margin:4px 0; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:12px;}
+        .item-menu:hover {background:var(--cor-fundo);}
+        .v-vista {border-left:4px solid var(--cor-sucesso);}
+        .v-prazo {border-left:4px solid var(--cor-prazo);}
+        .v-vence-hoje {background:#fff8e1; border-left:4px solid var(--cor-alerta);}
+        .v-vencido {background:#fdecea; border-left:4px solid var(--cor-vencido);}
+        .aviso {padding:3px 10px; border-radius:20px; font-size:12px; font-weight:bold; display:inline-block; margin-left:8px; white-space:nowrap;}
+        .avatar {width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#0D47A1,#1976D2); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0;}
+        .linha-cliente {display:flex; align-items:center; gap:10px;}
+        .detalhe {font-size:13px; color:#64748b; margin-top:2px;}
+        @keyframes aparecer {from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+        header {background:linear-gradient(135deg, #0D47A1, #1976D2); color:white; padding:15px; position:fixed; top:0; width:100%; z-index:100; display:flex; justify-content:space-between; align-items:center;}
+        .conteudo {margin-top:80px; padding:0 15px;}
+        .vazio {text-align:center; padding:30px 10px; color:#94a3b8;}
+        .vazio i {font-size:32px; display:block; margin-bottom:8px;}
+        .banner-offline {display:none; background:#fff3e0; color:#9a5b00; font-size:13px; font-weight:600; text-align:center; padding:10px 15px; border-bottom:2px solid #F57F17;}
+        .banner-offline.mostrar {display:block;}
+        #toasts {position:fixed; bottom:20px; left:0; right:0; z-index:300; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;}
+        .toast {min-width:220px; max-width:90%; background:#1e293b; color:#fff; padding:14px 20px; border-radius:12px; font-size:14px; font-weight:600; box-shadow:0 4px 20px rgba(0,0,0,0.25); display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(20px); transition:0.25s;}
+        .toast.mostrar {opacity:1; transform:translateY(0);}
+        .toast.sucesso {background:linear-gradient(135deg,#2E7D32,#388E3C);}
+        .toast.erro {background:linear-gradient(135deg,#C62828,#D32F2F);}
+        .toast.info {background:linear-gradient(135deg,#0D47A1,#1976D2);}
+        .btn[disabled] {opacity:0.7; cursor:not-allowed;}
+        input.campo-invalido, select.campo-invalido {border-color:var(--cor-vencido); box-shadow:0 0 0 3px rgba(198,40,40,0.1);}
+        .linha-config {display:flex; justify-content:space-between; align-items:center; gap:16px;}
+        .switch {position:relative; display:inline-block; width:52px; height:30px; flex-shrink:0;}
+        .switch input {opacity:0; width:0; height:0;}
+        .slider-switch {position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cbd5e1; transition:.3s; border-radius:30px;}
+        .slider-switch:before {position:absolute; content:""; height:24px; width:24px; left:3px; bottom:3px; background:white; transition:.3s; border-radius:50%;}
+        input:checked + .slider-switch {background:var(--cor-sucesso);}
+        input:checked + .slider-switch:before {transform:translateX(22px);}
+        .btn-editar {background:#eef2ff; border:1px solid #dbe4ff; color:var(--cor-principal); width:38px; height:38px; min-width:38px; border-radius:10px; font-size:15px; cursor:pointer; flex-shrink:0;}
+        .btn-editar:active {transform:scale(0.95);}
+        .btn-excluir {background:#fdecea; border:1px solid #f8c9c2; color:var(--cor-vencido); width:38px; height:38px; min-width:38px; border-radius:10px; font-size:15px; cursor:pointer; flex-shrink:0;}
+        .btn-excluir:active {transform:scale(0.95);}
+        .btn-perigo {background:linear-gradient(135deg,#C62828,#D32F2F); color:white;}
+        .btn-cancelar {background:#e2e8f0; color:#334155;}
+        .caixa-pagamento {background:#f4f6fb; border:1px dashed #cbd5e1; border-radius:12px; padding:14px; margin-top:6px;}
+        .modal-confirmar {position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(15,23,42,0.55);}
+        .modal-confirmar.oculto {display:none;}
+        .modal-caixa {background:#fff; border-radius:18px; padding:26px 22px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3); text-align:center;}
+        .modal-icone {font-size:38px; margin-bottom:10px;}
+        .modal-mensagem {font-size:15px; color:#334155; margin-bottom:20px; white-space:pre-line; line-height:1.5;}
+    </style>
+</head>
+<body>
+<div class="tela-login" id="telaLogin">
+    <div class="caixa-login">
+        <h1>🔒 LOJA PROFISSIONAL</h1>
+        <p>Acesso restrito ao dono da loja</p>
+        <div class="erro-login" id="erroLogin"></div>
+        <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button class="btn btn-principal" onclick="fazerLogin()" id="btn-login">Entrar</button>
+    </div>
+</div>
+<div id="appConteudo" class="oculto">
+<div id="toasts"></div>
+<div class="modal-confirmar oculto" id="modalConfirmar">
+    <div class="modal-caixa">
+        <div class="modal-icone">⚠️</div>
+        <p class="modal-mensagem" id="modalMensagem"></p>
+        <div class="linha">
+            <div class="col"><button class="btn btn-cancelar" onclick="fecharModalConfirmar()">Cancelar</button></div>
+            <div class="col"><button class="btn btn-perigo" id="modalBtnConfirmar" onclick="executarConfirmacao()">🗑️ Excluir</button></div>
+        </div>
+    </div>
+</div>
+<div class="modal-confirmar oculto" id="modalPix">
+    <div class="modal-caixa" style="max-width:340px;">
+        <div class="secao-titulo" style="justify-content:center;">💠 Pagamento via Pix</div>
+        <p class="detalhe" id="pixNomeRecebedor" style="text-align:center; margin-bottom:8px;"></p>
+        <label class="campo">Valor (opcional)</label>
+        <input type="number" step="0.01" id="pix-valor-modal" placeholder="Deixe em branco pra digitar no banco" oninput="gerarQrPixAgora()">
+        <div id="pix-qr-container" style="display:flex; justify-content:center; align-items:center; min-height:180px; margin:10px 0;"></div>
+        <label class="campo">Código Pix Copia e Cola</label>
+        <textarea id="pix-codigo-texto" readonly rows="3" style="font-size:11px;"></textarea>
+        <button class="btn btn-sucesso" onclick="copiarCodigoPix()">📋 Copiar código</button>
+        <button class="btn btn-cancelar mt-2" onclick="fecharModalPix()">Fechar</button>
+    </div>
+</div>
+<div class="fundo-escuro" id="fundoMenu" onclick="fecharMenu()"></div>
+<div class="menu-lateral" id="menuLateral">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-bold text-[#0D47A1]">MENU PRINCIPAL</h2>
+        <span class="text-xl cursor-pointer text-gray-600" onclick="fecharMenu()">✖</span>
+    </div>
+    <div class="item-menu" onclick="irPara('nova-venda')"><span>➕</span> Nova Venda</div>
+    <div class="item-menu" onclick="irPara('estoque')"><span>📦</span> Meu Estoque</div>
+    <div class="item-menu" onclick="irPara('cobrancas')"><span>📅</span> Vendas a Prazo / A Receber</div>
+    <div class="item-menu" onclick="irPara('vista')"><span>💵</span> Vendas à Vista</div>
+    <div class="item-menu" onclick="irPara('quitados')"><span>✅</span> Quem Já Pagou</div>
+    <div class="item-menu" onclick="irPara('relatorio')"><span>📊</span> Relatório</div>
+    <div class="item-menu" onclick="irPara('configuracoes')"><span>⚙️</span> Configurações</div>
+</div>
+<header>
+    <button onclick="abrirMenu()" class="text-xl"><span>☰</span> Menu</button>
+    <h1 class="text-lg font-bold">LOJA PROFISSIONAL</h1>
+    <span class="text-xs" id="status">🔄 Conectando...</span>
+</header>
+<div class="banner-offline" id="bannerOffline">⚠️ Sem conexão com o servidor central — os dados estão sendo salvos só neste aparelho.</div>
+<div class="conteudo">
+<!-- 🛒 NOVA VENDA — À VISTA E A PRAZO -->
+<div id="nova-venda" class="aba ativa">
+    <div class="card">
+        <h2 class="text-xl font-bold text-[#0D47A1] mb-2">🛒 Nova Venda</h2>
+
+        <div class="secao-titulo"><span>👤</span> Dados do Cliente</div>
+        <label class="campo">Nome completo *</label>
+        <input type="text" id="cli-nome" placeholder="Ex: Maria da Silva Souza" required>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Apelido</label>
+                <input type="text" id="cli-apelido" placeholder="Como você chama ela(e)">
+            </div>
+            <div class="col">
+                <label class="campo">WhatsApp *</label>
+                <input type="tel" id="cli-tel" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTelefone(this)">
+            </div>
+        </div>
+
+        <div class="secao-titulo"><span>📍</span> Endereço para Cobrança</div>
+        <div class="linha">
+            <div class="col" style="flex:2;">
+                <label class="campo">Rua / Avenida</label>
+                <input type="text" id="cli-rua" placeholder="Ex: Rua das Flores">
+            </div>
+            <div class="col-sm">
+                <label class="campo">Número</label>
+                <input type="text" id="cli-numero" placeholder="Nº">
+            </div>
+        </div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Bairro</label>
+                <input type="text" id="cli-bairro" placeholder="Bairro">
+            </div>
+            <div class="col">
+                <label class="campo">Cidade</label>
+                <input type="text" id="cli-cidade" placeholder="Cidade">
+            </div>
+        </div>
+
+        <div class="secao-titulo"><span>🛍️</span> Produto</div>
+        <select id="produto-venda" onchange="atualizarDadosProduto()"></select>
+        <p id="info-prod" class="text-green-700 font-medium mt-1"></p>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Quantidade</label>
+                <input type="number" id="qtd-venda" value="1" min="1">
+            </div>
+            <div class="col" style="display:flex; align-items:flex-end;">
+                <button type="button" class="btn btn-principal" style="margin:0;" onclick="adicionarAoCarrinho()">🛒 Adicionar</button>
+            </div>
+        </div>
+
+        <div id="carrinho-container"></div>
+
+        <div class="secao-titulo mt-2"><span>💳</span> Pagamento</div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Forma de pagamento</label>
+                <select id="tipo-pagamento" onchange="mostrarCamposPrazo()">
+                    <option value="vista">💵 À VISTA</option>
+                    <option value="30">📅 A PRAZO — 30 DIAS</option>
+                    <option value="60">📅 A PRAZO — 60 DIAS</option>
+                    <option value="com-entrada">💰 COM ENTRADA + SALDO</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="bloco-prazo" class="hidden">
+            <div class="linha">
+                <div class="col">
+                    <label class="campo">Data da venda</label>
+                    <input type="date" id="data-venda" readonly>
+                </div>
+                <div class="col">
+                    <label class="campo">Data de vencimento (pode ajustar)</label>
+                    <input type="date" id="data-vencimento" oninput="atualizarTextoVenc()">
+                </div>
+            </div>
+        </div>
+        <input type="number" id="valor-entrada" placeholder="Valor da entrada R$" class="hidden" step="0.01" oninput="calcularValor()">
+
+        <div class="secao-titulo"><span>🏷️</span> Desconto (opcional)</div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Tipo de desconto</label>
+                <select id="desconto-tipo" onchange="calcularValor()">
+                    <option value="nenhum">Sem desconto</option>
+                    <option value="valor">R$ (valor fixo)</option>
+                    <option value="percentual">% (porcentagem)</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="campo">Valor do desconto</label>
+                <input type="number" id="desconto-valor" value="0" min="0" step="0.01" oninput="calcularValor()">
+            </div>
+        </div>
+
+        <p class="text-sm text-gray-600 mt-2" id="resumo-subtotal"></p>
+        <p class="text-xl font-bold text-blue-700 mt-2">Valor Total: R$ <span id="valor-final">0,00</span></p>
+        <p id="resumo-saldo" class="text-sm text-purple-700 font-medium hidden"></p>
+        <textarea id="obs" placeholder="Observação: combinado com o cliente, forma de pagamento do saldo..."></textarea>
+        <button class="btn btn-sucesso mt-4" id="btn-concluir-venda" onclick="concluirVenda()">✅ CONCLUIR VENDA E BAIXAR DO ESTOQUE</button>
+    </div>
+</div>
+<!-- 📦 ESTOQUE -->
+<div id="estoque" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-[#0D47A1] mb-4">📦 Cadastrar no Estoque</h2>
+        <select id="tipo-prod">
+            <option>Calcinha</option><option>Lingerie</option><option>Cueca Adulto</option><option>Cueca Infantil</option>
+            <option>Pijama Feminino</option><option>Pijama Masculino</option><option>Camisa</option><option>Calça</option>
+        </select>
+        <div class="linha">
+            <div class="col"><input type="text" id="desc-prod" placeholder="Cor / Modelo"></div>
+            <div class="col"><input type="text" id="tam-prod" placeholder="Tamanho"></div>
+        </div>
+        <div class="linha">
+            <div class="col"><input type="number" id="qtd-prod" placeholder="Quantidade total" value="0"></div>
+            <div class="col"><input type="number" step="0.01" id="preco-prod" placeholder="Preço de UMA peça R$" value="0"></div>
+        </div>
+        <button class="btn btn-sucesso mt-3" onclick="adicionarEstoque()">✅ Salvar e Limpar</button>
+    </div>
+    <div class="card">
+        <h3 class="font-bold mb-3">📋 Meu Estoque Atual</h3>
+        <div id="lista-estoque"></div>
+    </div>
+</div>
+<!-- 💵 VENDAS À VISTA -->
+<div id="vista" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-green-700 mb-4">💵 Vendas à Vista</h2>
+        <p class="text-sm text-gray-600 mb-3">Inclui as vendas feitas pelo app do vendedor. Ative o Modo Edição em Configurações pra excluir alguma.</p>
+        <div id="lista-vista"></div>
+    </div>
+</div>
+<!-- 💰 VENDAS A PRAZO / A RECEBER -->
+<div id="cobrancas" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-orange-600 mb-4">💰 Vendas a Prazo — Quem Está Devendo</h2>
+        <p class="text-sm text-gray-600 mb-3">📅 Ordenado por vencimento: vencidas primeiro, depois as mais próximas</p>
+        <div id="lista-cobrancas"></div>
+    </div>
+</div>
+<!-- ✅ PAGAMENTOS RECEBIDOS -->
+<div id="quitados" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-green-700 mb-4">✅ Quem Já Pagou</h2>
+        <p class="text-sm text-gray-600 mb-3">Vendas a prazo totalmente quitadas</p>
+        <div id="lista-quitados"></div>
+    </div>
+</div>
+<!-- 📊 RELATÓRIO -->
+<div id="relatorio" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-[#0D47A1] mb-4">📊 Resumo Geral</h2>
+        <p>Total Vendido: <b id="r-total">R$ 0,00</b></p>
+        <p class="text-green-700">À Vista: <span id="r-vista">R$ 0,00</span></p>
+        <p class="text-purple-700">A Prazo 30 dias: <span id="r-30">R$ 0,00</span></p>
+        <p class="text-purple-900">A Prazo 60 dias: <span id="r-60">R$ 0,00</span></p>
+        <p class="text-orange-600">Com entrada: <span id="r-entrada">R$ 0,00</span></p>
+        <hr class="my-4">
+        <p class="text-green-700">Já recebido (vendas a prazo): <span id="r-recebido-prazo">R$ 0,00</span></p>
+        <p class="text-lg font-semibold text-red-600">Total a receber: <b id="r-receber">R$ 0,00</b></p>
+    </div>
+</div>
+<!-- ⚙️ CONFIGURAÇÕES -->
+<div id="configuracoes" class="aba">
+    <div class="card">
+        <h2 class="text-xl font-bold text-[#0D47A1] mb-2">⚙️ Configurações</h2>
+        <div class="linha-config">
+            <div>
+                <b>Modo edição</b>
+                <p class="detalhe">Ative para corrigir dados de clientes, ajustar o estoque, mudar vencimentos e registrar pagamentos recebidos (ex: cliente deu R$50 de sinal num produto de R$300).</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="chk-modo-edicao" onchange="alternarModoEdicao(this.checked)">
+                <span class="slider-switch"></span>
+            </label>
+        </div>
+    </div>
+    <div class="card">
+        <div class="linha-config">
+            <div>
+                <b>🔔 Avisar quando uma venda for vencer</b>
+                <p class="detalhe">Manda um aviso quando uma venda a prazo vencer hoje ou amanhã. Funciona enquanto este aplicativo estiver aberto no navegador — como é um arquivo sem servidor por trás, ele não consegue te avisar com o app fechado.</p>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="chk-notificacoes" onchange="alternarNotificacoes(this.checked)">
+                <span class="slider-switch"></span>
+            </label>
+        </div>
+        <button class="btn btn-principal mt-3" onclick="verificarVencimentos(true)"><span>🔄</span> Verificar vencimentos agora</button>
+    </div>
+    <div class="card">
+        <h3 class="font-bold mb-1">💠 Chaves Pix (para receber pagamento)</h3>
+        <p class="detalhe mb-2">Toque em "Gerar QR Code" pra mostrar pro cliente pagar na hora.</p>
+        <div id="lista-pix"></div>
+        <button class="btn btn-principal mt-2" onclick="adicionarChavePixNova()">➕ Adicionar chave Pix</button>
+    </div>
+    <div class="card">
+        <h3 class="font-bold mb-1">👥 Vendedores</h3>
+        <p class="detalhe mb-2">Crie o login (e-mail e senha) que cada vendedor vai usar no app dele.</p>
+        <div id="lista-vendedores"></div>
+        <div class="erro-login" id="erro-novo-vendedor"></div>
+        <label class="campo">Nome do vendedor</label>
+        <input type="text" id="nv-nome" placeholder="Nome de quem vai vender">
+        <label class="campo">E-mail de login</label>
+        <input type="email" id="nv-email" placeholder="email@exemplo.com">
+        <label class="campo">Senha (mínimo 6 caracteres)</label>
+        <input type="text" id="nv-senha" placeholder="Senha de acesso">
+        <button class="btn btn-principal mt-2" onclick="criarVendedor()" id="btn-criar-vendedor">➕ Criar login do vendedor</button>
+    </div>
+    <div class="card">
+        <button class="btn btn-cancelar" onclick="sair()">🚪 Sair da conta</button>
+    </div>
+</div>
+</div>
+</div>
+<script>
+// ---------- Estado da aplicação: sempre inicializa primeiro, independente do servidor ----------
+let dados = { estoque: [], vendas: [] };
+let carrinho = [];
+let conectado = false;
+let db = null;
+let modoEdicao = false;
+let editandoEstoqueId = null;
+let editandoVendaId = null;
+const TIPOS_PRODUTO = ['Calcinha','Lingerie','Cueca Adulto','Cueca Infantil','Pijama Feminino','Pijama Masculino','Camisa','Calça'];
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDsQvFPzupHPo5a-Q_g16NICy03U54ly24",
+    authDomain: "loja-rn-modas.firebaseapp.com",
+    projectId: "loja-rn-modas",
+    storageBucket: "loja-rn-modas.firebasestorage.app",
+    messagingSenderId: "834153556948",
+    appId: "1:834153556948:web:49c1cb68dac612beee4441"
+};
+
+// Conecta ao servidor central se possível. Se o SDK não carregar (sem internet,
+// bloqueio de rede, visualizador restrito, etc.) o app continua funcionando
+// normalmente, salvando neste aparelho.
+try {
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    }
+} catch (e) {
+    db = null;
+}
+
+// ---------- Login (Firebase Authentication) ----------
+function fazerLogin(){
+    let email = document.getElementById('login-email').value.trim();
+    let senha = document.getElementById('login-senha').value;
+    let erroEl = document.getElementById('erro-login') || document.getElementById('erroLogin');
+    erroEl.textContent = '';
+    if(!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; return; }
+    if (typeof firebase === 'undefined' || !firebase.auth) { erroEl.textContent = 'Sem conexão — não é possível entrar agora.'; return; }
+    let btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+        .catch(e=>{
+            let msgs = {
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/user-not-found':'Não existe login com esse e-mail.',
+                'auth/wrong-password':'Senha incorreta.',
+                'auth/invalid-credential':'E-mail ou senha incorretos.',
+                'auth/too-many-requests':'Muitas tentativas erradas. Espere um pouco e tente de novo.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível entrar. Tente novamente.';
+        })
+        .finally(()=>{ btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function sair(){
+    if(firebase.auth) firebase.auth().signOut();
+}
+
+// Cria o login de um novo vendedor sem tirar o dono da loja da própria conta:
+// usa uma segunda instância "invisível" do Firebase só pra esse cadastro.
+function criarVendedor(){
+    let nome = document.getElementById('nv-nome').value.trim();
+    let email = document.getElementById('nv-email').value.trim();
+    let senha = document.getElementById('nv-senha').value;
+    let erroEl = document.getElementById('erro-novo-vendedor');
+    erroEl.textContent = '';
+    if(!nome || !email || !senha) { erroEl.textContent = 'Preencha nome, e-mail e senha.'; return; }
+    if(senha.length < 6) { erroEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+
+    let btn = document.getElementById('btn-criar-vendedor');
+    btn.disabled = true; btn.textContent = 'Criando...';
+
+    let nomeApp = 'appSecundario_'+Date.now();
+    let appSecundario = firebase.initializeApp(firebaseConfig, nomeApp);
+    appSecundario.auth().createUserWithEmailAndPassword(email, senha)
+        .then(()=>{
+            dados.vendedores = dados.vendedores || [];
+            dados.vendedores.push({ nome, email, criadoEm: hojeISO() });
+            salvar();
+            renderizarVendedores();
+            document.getElementById('nv-nome').value='';
+            document.getElementById('nv-email').value='';
+            document.getElementById('nv-senha').value='';
+            mostrarToast('Login do vendedor criado! Passe esse e-mail e senha pra ele.', 'sucesso');
+        })
+        .catch(e=>{
+            let msgs = {
+                'auth/email-already-in-use':'Já existe um login com esse e-mail.',
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/weak-password':'Senha muito fraca — use pelo menos 6 caracteres.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível criar o login.';
+        })
+        .finally(()=>{
+            btn.disabled = false; btn.textContent = '➕ Criar login do vendedor';
+            appSecundario.auth().signOut().catch(()=>{});
+            appSecundario.delete().catch(()=>{});
+        });
+}
+
+function renderizarVendedores(){
+    let lista = document.getElementById('lista-vendedores');
+    if(!lista) return;
+    let vendedores = dados.vendedores || [];
+    if(vendedores.length===0){
+        lista.innerHTML = `<div class="vazio">Nenhum vendedor cadastrado ainda.</div>`;
+        return;
+    }
+    lista.innerHTML = vendedores.map((v,i)=>`
+        <div class="item-pix-vendedor">
+            <div><b>${v.nome}</b><div class="detalhe">${v.email}</div></div>
+            <button class="btn-excluir" onclick="removerVendedorDaLista(${i})" title="Remover da lista"><span>🗑️</span></button>
+        </div>`).join('') +
+        `<p class="detalhe" style="margin-top:8px;">⚠️ Isso remove só da listinha aqui. Pra bloquear o acesso dele de verdade, exclua o e-mail em: console.firebase.google.com → Authentication → Users.</p>`;
+}
+
+function removerVendedorDaLista(i){
+    dados.vendedores.splice(i,1);
+    salvar();
+    renderizarVendedores();
+}
+
+// Só libera o app depois de confirmar o login. Enquanto não sabe se está logado,
+// mantém a tela de carregamento (login) visível pra não piscar conteúdo indevido.
+if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged(user=>{
+        if(user){
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('appConteudo').classList.remove('oculto');
+            iniciarApp();
+        } else {
+            document.getElementById('appConteudo').classList.add('oculto');
+            document.getElementById('telaLogin').classList.remove('oculto');
+        }
+    });
+}
+
+// ---------- Avisos profissionais (substituem os alert()) ----------
+function mostrarToast(msg, tipo='sucesso'){
+    let icones = {sucesso:'fa-check-circle', erro:'fa-exclamation-circle', info:'fa-info-circle'};
+    let el = document.createElement('div');
+    el.className = `toast ${tipo}`;
+    el.innerHTML = `<i class="fa ${icones[tipo]||icones.sucesso}"></i><span>${msg}</span>`;
+    document.getElementById('toasts').appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('mostrar'));
+    setTimeout(()=>{ el.classList.remove('mostrar'); setTimeout(()=>el.remove(), 300); }, 3200);
+}
+
+function definirStatusConexao(ok){
+    conectado = ok;
+    document.getElementById('status').textContent = ok ? '🟢 Online' : '🔴 Local apenas';
+    document.getElementById('bannerOffline').classList.toggle('mostrar', !ok);
+}
+
+// ---------- Confirmação própria do app (não depende do confirm() do navegador,
+// que em alguns visualizadores/webviews não funciona e cancela sozinho) ----------
+let _confirmacaoPendente = null;
+
+function confirmarExclusao(mensagem, aoConfirmar){
+    document.getElementById('modalMensagem').textContent = mensagem;
+    document.getElementById('modalConfirmar').classList.remove('oculto');
+    _confirmacaoPendente = aoConfirmar;
+}
+function fecharModalConfirmar(){
+    document.getElementById('modalConfirmar').classList.add('oculto');
+    _confirmacaoPendente = null;
+}
+function executarConfirmacao(){
+    let acao = _confirmacaoPendente;
+    fecharModalConfirmar();
+    if(acao) acao();
+}
+
+function marcarInvalido(id){
+    let el = document.getElementById(id);
+    el.classList.add('campo-invalido');
+    el.focus();
+    setTimeout(()=>el.classList.remove('campo-invalido'), 1600);
+}
+
+function abrirMenu(){document.getElementById('menuLateral').classList.add('aberto');document.getElementById('fundoMenu').style.display='block';}
+function fecharMenu(){document.getElementById('menuLateral').classList.remove('aberto');document.getElementById('fundoMenu').style.display='none';}
+function irPara(nome){fecharMenu(); document.querySelectorAll('.aba').forEach(a=>a.classList.remove('ativa')); document.getElementById(nome).classList.add('ativa'); atualizarTela();}
+
+function alternarModoEdicao(ativo){
+    modoEdicao = ativo;
+    localStorage.setItem('modoEdicaoAtivo', ativo ? '1' : '0');
+    editandoEstoqueId = null;
+    editandoVendaId = null;
+    atualizarTela();
+    mostrarToast(ativo ? 'Modo edição ativado — toque no lápis para corrigir dados.' : 'Modo edição desativado.', 'info');
+}
+
+// ---------- Avisos de vencimento ----------
+function alternarNotificacoes(ativo){
+    if(!ativo){
+        localStorage.setItem('notificacoesAtivas', '0');
+        mostrarToast('Avisos de vencimento desativados.', 'info');
+        return;
+    }
+    if(typeof Notification === 'undefined'){
+        // Navegador não suporta notificações do sistema: ainda assim avisamos dentro do app
+        localStorage.setItem('notificacoesAtivas', '1');
+        mostrarToast('Esse navegador não permite notificações do sistema — vou avisar aqui dentro do app.', 'info');
+        verificarVencimentos();
+        return;
+    }
+    Notification.requestPermission().then(permissao=>{
+        if(permissao==='granted'){
+            localStorage.setItem('notificacoesAtivas', '1');
+            mostrarToast('Avisos de vencimento ativados.', 'sucesso');
+            verificarVencimentos();
+        } else {
+            document.getElementById('chk-notificacoes').checked = false;
+            localStorage.setItem('notificacoesAtivas', '0');
+            mostrarToast('O navegador não deu permissão para notificações.', 'erro');
+        }
+    }).catch(()=>{
+        localStorage.setItem('notificacoesAtivas', '1');
+        verificarVencimentos();
+    });
+}
+
+function dispararAviso(titulo, corpo){
+    if(typeof Notification !== 'undefined' && Notification.permission==='granted'){
+        try { new Notification(titulo, {body: corpo}); return; } catch(e){ /* cai no toast */ }
+    }
+    mostrarToast(`${titulo} — ${corpo}`, 'info');
+}
+
+// Verifica vendas a prazo vencendo hoje ou amanhã e dispara os avisos.
+// forcar=true (botão "Verificar agora") ignora o controle de "já avisei hoje".
+function verificarVencimentos(forcar){
+    if(!forcar && localStorage.getItem('notificacoesAtivas') !== '1') return;
+
+    let hoje = new Date(); hoje.setHours(0,0,0,0);
+    let hojeStr = hojeISO();
+    let chaveAvisados = 'avisados-' + hojeStr;
+    let jaAvisados = forcar ? [] : JSON.parse(localStorage.getItem(chaveAvisados) || '[]');
+
+    let pendentes = dados.vendas.filter(v => v.tipoPagamento!=='vista' && v.dataVencimento && (v.valorTotal-(v.valorPago||0))>0.01);
+    let encontrados = 0;
+    let novosAvisados = [];
+
+    pendentes.forEach(v=>{
+        let venc = new Date(v.dataVencimento+'T00:00:00');
+        let dias = Math.round((venc - hoje)/86400000);
+        if(dias<=1 && (forcar || !jaAvisados.includes(v.id))){
+            let saldo = v.valorTotal - (v.valorPago||0);
+            let titulo = dias<0 ? `⚠️ Venda vencida há ${Math.abs(dias)} dia(s)` : dias===0 ? '📅 Vence hoje!' : '📅 Vence amanhã';
+            let corpo = `${v.cliente.apelido || v.cliente.nome} — R$ ${saldo.toFixed(2)}`;
+            dispararAviso(titulo, corpo);
+            novosAvisados.push(v.id);
+            encontrados++;
+        }
+    });
+
+    if(!forcar && novosAvisados.length>0){
+        localStorage.setItem(chaveAvisados, JSON.stringify(jaAvisados.concat(novosAvisados)));
+    }
+    if(forcar && encontrados===0){
+        mostrarToast('Nenhuma venda vencendo hoje ou amanhã. 👍', 'sucesso');
+    }
+}
+
+// Garante que vendas antigas (salvas antes desta versão) tenham os campos de pagamento
+function normalizarDados(){
+    dados.estoque = dados.estoque || [];
+    dados.vendas = dados.vendas || [];
+    dados.vendas.forEach(v=>{
+        if(v.valorPago === undefined || v.valorPago === null) v.valorPago = v.valorEntrada || 0;
+        if(!Array.isArray(v.pagamentos)) v.pagamentos = [];
+    });
+    if(!Array.isArray(dados.pixChaves)){
+        dados.pixChaves = [
+            {id:1, nome:'Nayra Coelho Goncalves', tipo:'telefone', chave:'99985107347', cidade:'BRASIL'},
+            {id:2, nome:'Romildo Silva dos Santos', tipo:'cnpj', chave:'66611053000157', cidade:'BRASIL'}
+        ];
+    }
+    dados.vendedores = dados.vendedores || [];
+}
+
+// Máscara simples de WhatsApp: (00) 00000-0000
+function mascaraTelefone(campo){
+    let v = campo.value.replace(/\D/g,'').slice(0,11);
+    if(v.length>10) v = v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+    else if(v.length>6) v = v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
+    else if(v.length>2) v = v.replace(/(\d{2})(\d{0,5})/,'($1) $2');
+    else if(v.length>0) v = v.replace(/(\d{0,2})/,'($1');
+    campo.value = v;
+}
+
+function hojeISO(){
+    let d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0,10);
+}
+
+function mostrarCamposPrazo(){
+    let tipo = document.getElementById('tipo-pagamento').value;
+    let ehPrazo = tipo!=='vista';
+    document.getElementById('bloco-prazo').classList.toggle('hidden', !ehPrazo);
+    document.getElementById('valor-entrada').classList.toggle('hidden', tipo!=='com-entrada');
+    document.getElementById('resumo-saldo').classList.toggle('hidden', tipo!=='com-entrada');
+    if(ehPrazo){
+        document.getElementById('data-venda').value = hojeISO();
+        let dias = tipo==='30' ? 30 : tipo==='60' ? 60 : 30;
+        let venc = new Date();
+        venc.setDate(venc.getDate() + dias);
+        venc.setMinutes(venc.getMinutes() - venc.getTimezoneOffset());
+        document.getElementById('data-vencimento').value = venc.toISOString().slice(0,10);
+    }
+    calcularValor();
+}
+
+function atualizarDadosProduto(){
+    let id = document.getElementById('produto-venda').value;
+    let p = dados.estoque.find(i=>i.id==id);
+    if(p) {
+        document.getElementById('info-prod').textContent = `Disponível: ${p.quantidade} peças | R$ ${p.precoUnitario.toFixed(2)} cada`;
+    }
+}
+
+// Junta itens iguais no carrinho (mesmo produto), respeitando o estoque disponível
+function adicionarAoCarrinho(){
+    let id = document.getElementById('produto-venda').value;
+    let qtd = Number(document.getElementById('qtd-venda').value);
+    if(!id) return mostrarToast('Cadastre um produto no estoque antes de vender.', 'erro');
+    if(!qtd || qtd < 1) return mostrarToast('Informe uma quantidade válida.', 'erro');
+
+    let p = dados.estoque.find(i=>i.id==id);
+    if(!p) return mostrarToast('Produto não encontrado no estoque.', 'erro');
+
+    let itemExistente = carrinho.find(i=>i.idProduto==id);
+    let qtdJaNoCarrinho = itemExistente ? itemExistente.quantidade : 0;
+    if(qtd + qtdJaNoCarrinho > p.quantidade){
+        return mostrarToast(`Só tem ${p.quantidade} peças desse produto em estoque (você já tem ${qtdJaNoCarrinho} no carrinho).`, 'erro');
+    }
+
+    if(itemExistente){
+        itemExistente.quantidade += qtd;
+    } else {
+        carrinho.push({
+            idProduto: id,
+            descricao: `${p.tipo} — ${p.descricao} ${p.tamanho}`,
+            quantidade: qtd,
+            precoUnitario: p.precoUnitario
+        });
+    }
+    document.getElementById('qtd-venda').value = 1;
+    renderizarCarrinho();
+    calcularValor();
+}
+
+function removerDoCarrinho(idProduto){
+    carrinho = carrinho.filter(i=>i.idProduto != idProduto);
+    renderizarCarrinho();
+    calcularValor();
+}
+
+function renderizarCarrinho(){
+    let container = document.getElementById('carrinho-container');
+    if(!container) return;
+    if(carrinho.length===0){
+        container.innerHTML = `<p class="detalhe mt-1">🛒 Carrinho vazio — adicione ao menos um produto.</p>`;
+        return;
+    }
+    container.innerHTML = carrinho.map(i=>`
+        <div class="item-carrinho">
+            <div>
+                <b>${i.descricao}</b>
+                <div class="detalhe">Qtd: ${i.quantidade} × R$ ${i.precoUnitario.toFixed(2)} = R$ ${(i.quantidade*i.precoUnitario).toFixed(2)}</div>
+            </div>
+            <button type="button" class="btn-remover-item" onclick="removerDoCarrinho('${i.idProduto}')" title="Remover">✕</button>
+        </div>`).join('');
+}
+
+function subtotalCarrinho(){
+    return carrinho.reduce((soma,i)=> soma + i.quantidade*i.precoUnitario, 0);
+}
+
+// Calcula o valor total já aplicando o desconto (em R$ ou %), sem deixar passar de 0 nem do subtotal
+function calcularTotalComDesconto(subtotal){
+    let tipoDesc = document.getElementById('desconto-tipo') ? document.getElementById('desconto-tipo').value : 'nenhum';
+    let valorDesc = Number(document.getElementById('desconto-valor') ? document.getElementById('desconto-valor').value : 0) || 0;
+    let desconto = 0;
+    if(tipoDesc === 'valor') desconto = valorDesc;
+    else if(tipoDesc === 'percentual') desconto = subtotal * (valorDesc/100);
+    desconto = Math.max(0, Math.min(desconto, subtotal));
+    return { total: subtotal - desconto, desconto, tipoDesc, valorDesc };
+}
+
+function calcularValor(){
+    let subtotal = subtotalCarrinho();
+
+    let { total, desconto } = calcularTotalComDesconto(subtotal);
+    document.getElementById('valor-final').textContent = total.toFixed(2);
+
+    let elSubtotal = document.getElementById('resumo-subtotal');
+    if(elSubtotal){
+        elSubtotal.textContent = desconto > 0
+            ? `Subtotal: R$ ${subtotal.toFixed(2)} — Desconto: R$ ${desconto.toFixed(2)}`
+            : '';
+    }
+
+    let tipo = document.getElementById('tipo-pagamento').value;
+    if(tipo==='com-entrada'){
+        let entrada = Number(document.getElementById('valor-entrada').value) || 0;
+        let saldo = total - entrada;
+        document.getElementById('resumo-saldo').textContent = `Entrada: R$ ${entrada.toFixed(2)} | Saldo a receber no vencimento: R$ ${saldo.toFixed(2)}`;
+    }
+}
+
+function limparFormEstoque(){
+    document.getElementById('tipo-prod').selectedIndex = 0;
+    document.getElementById('desc-prod').value = '';
+    document.getElementById('tam-prod').value = '';
+    document.getElementById('qtd-prod').value = '0';
+    document.getElementById('preco-prod').value = '0';
+    document.getElementById('desc-prod').focus();
+}
+
+function adicionarEstoque(){
+    let tipo = document.getElementById('tipo-prod').value;
+    let desc = document.getElementById('desc-prod').value.trim();
+    let tam = document.getElementById('tam-prod').value.trim();
+    let qtd = Number(document.getElementById('qtd-prod').value);
+    let preco = Number(document.getElementById('preco-prod').value);
+
+    if(!desc) return (marcarInvalido('desc-prod'), mostrarToast('Informe a cor / modelo do produto.', 'erro'));
+    if(qtd<=0) return (marcarInvalido('qtd-prod'), mostrarToast('Informe uma quantidade maior que zero.', 'erro'));
+    if(preco<=0) return (marcarInvalido('preco-prod'), mostrarToast('Informe o preço de uma peça.', 'erro'));
+
+    // Se já existe um item igual (mesmo tipo/cor/tamanho), soma na mesma linha em vez de duplicar
+    let existente = dados.estoque.find(p =>
+        p.tipo===tipo &&
+        p.descricao.trim().toLowerCase()===desc.toLowerCase() &&
+        p.tamanho.trim().toLowerCase()===tam.toLowerCase()
+    );
+    if(existente){
+        existente.quantidade += qtd;
+        existente.precoUnitario = preco;
+    } else {
+        dados.estoque.push({id:Date.now(), tipo, descricao:desc, tamanho:tam, quantidade:qtd, precoUnitario:preco});
+    }
+
+    atualizarTela();      // atualiza a tela e o select de produtos IMEDIATAMENTE, sem esperar o servidor
+    salvar();
+    mostrarToast(`Estoque salvo: ${qtd} ${tipo}${tam?' ('+tam+')':''} — já disponível para venda.`, 'sucesso');
+    limparFormEstoque();
+}
+
+function editarEstoque(id){ editandoEstoqueId = id; atualizarTela(); }
+function cancelarEdicaoEstoque(){ editandoEstoqueId = null; atualizarTela(); }
+
+function salvarEdicaoEstoque(id){
+    let p = dados.estoque.find(i=>i.id===id);
+    if(!p) return;
+    let tipo = document.getElementById(`edit-tipo-${id}`).value;
+    let desc = document.getElementById(`edit-desc-${id}`).value.trim();
+    let tam = document.getElementById(`edit-tam-${id}`).value.trim();
+    let qtd = Number(document.getElementById(`edit-qtd-${id}`).value);
+    let preco = Number(document.getElementById(`edit-preco-${id}`).value);
+
+    if(!desc) return (marcarInvalido(`edit-desc-${id}`), mostrarToast('Informe a cor / modelo.', 'erro'));
+    if(qtd<0) return (marcarInvalido(`edit-qtd-${id}`), mostrarToast('Quantidade não pode ser negativa.', 'erro'));
+    if(preco<=0) return (marcarInvalido(`edit-preco-${id}`), mostrarToast('Informe um preço válido.', 'erro'));
+
+    p.tipo=tipo; p.descricao=desc; p.tamanho=tam; p.quantidade=qtd; p.precoUnitario=preco;
+    editandoEstoqueId = null;
+    atualizarTela();
+    salvar();
+    mostrarToast('Estoque ajustado com sucesso.', 'sucesso');
+}
+
+function excluirEstoque(id){
+    let p = dados.estoque.find(i=>i.id===id);
+    if(!p) return;
+    confirmarExclusao(`Excluir "${p.tipo} — ${p.descricao}${p.tamanho?' '+p.tamanho:''}" do estoque?\nEssa ação não pode ser desfeita.`, ()=>{
+        dados.estoque = dados.estoque.filter(i=>i.id!==id);
+        if(editandoEstoqueId===id) editandoEstoqueId = null;
+        atualizarTela();
+        salvar();
+        mostrarToast('Item excluído do estoque.', 'sucesso');
+    });
+}
+
+function formatarEndereco(c){
+    let partes = [];
+    if(c.rua) partes.push(c.numero ? `${c.rua}, ${c.numero}` : c.rua);
+    if(c.bairro) partes.push(c.bairro);
+    if(c.cidade) partes.push(c.cidade);
+    return partes.join(' — ') || 'Endereço não informado';
+}
+
+function limparFormVenda(){
+    ['cli-nome','cli-apelido','cli-tel','cli-rua','cli-numero','cli-bairro','cli-cidade','obs','valor-entrada']
+        .forEach(id=>document.getElementById(id).value='');
+    document.getElementById('qtd-venda').value = 1;
+    document.getElementById('tipo-pagamento').selectedIndex = 0;
+    document.getElementById('desconto-tipo').selectedIndex = 0;
+    document.getElementById('desconto-valor').value = 0;
+    carrinho = [];
+    renderizarCarrinho();
+    mostrarCamposPrazo();          // esconde os blocos de prazo/entrada e recalcula o valor
+    document.getElementById('cli-nome').focus();
+}
+
+// Registra a baixa de estoque + a venda de forma segura contra duas vendas ao mesmo tempo
+// (ex: dois vendedores vendendo a última peça no mesmo instante em aparelhos diferentes).
+// Quando conectado ao servidor central, usa uma TRANSAÇÃO: o Firebase busca o estoque mais
+// atual na hora de gravar, garante que ninguém mais levou a peça, e só aí confirma a venda.
+// Registra uma venda com vários itens (carrinho) numa transação só: ou baixa o estoque de
+// TODOS os produtos, ou não baixa de nenhum — evita ficar com venda "pela metade".
+function registrarVendaSeguraCarrinho(itensCarrinho, montarVenda, aoTerminar){
+    if(!db){
+        // Sem servidor: aplica direto neste aparelho (não existe risco de concorrência local)
+        for(let item of itensCarrinho){
+            let prod = dados.estoque.find(i=>i.id==item.idProduto);
+            if(!prod || prod.quantidade < item.quantidade){
+                aoTerminar(false, `"${item.descricao}" só tem ${prod?prod.quantidade:0} peças disponíveis.`);
+                return;
+            }
+        }
+        let produtosAtuais = itensCarrinho.map(item=>{
+            let prod = dados.estoque.find(i=>i.id==item.idProduto);
+            prod.quantidade -= item.quantidade;
+            return prod;
+        });
+        let venda = montarVenda(produtosAtuais);
+        dados.vendas.push(venda);
+        atualizarTela();
+        localStorage.setItem('dadosLoja', JSON.stringify(dados));
+        aoTerminar(true, venda);
+        return;
+    }
+
+    let ref = db.collection('lojaDados').doc('principal');
+    db.runTransaction(transacao => transacao.get(ref).then(doc=>{
+        let atuais = doc.exists ? doc.data() : {estoque:[], vendas:[]};
+        atuais.estoque = atuais.estoque || [];
+        atuais.vendas = atuais.vendas || [];
+        let produtosAtuais = [];
+        for(let item of itensCarrinho){
+            let prod = atuais.estoque.find(i=>i.id==item.idProduto);
+            if(!prod || prod.quantidade < item.quantidade){
+                throw new Error(`ESTOQUE_INSUFICIENTE:${item.descricao}:${prod ? prod.quantidade : 0}`);
+            }
+            produtosAtuais.push(prod);
+        }
+        // Só baixa o estoque depois de confirmar que TODOS os itens têm quantidade suficiente
+        itensCarrinho.forEach((item,i)=>{ produtosAtuais[i].quantidade -= item.quantidade; });
+        let venda = montarVenda(produtosAtuais);
+        atuais.vendas.push(venda);
+        transacao.set(ref, atuais);
+        return {atuais, venda};
+    })).then(({atuais, venda})=>{
+        dados = atuais;
+        normalizarDados();
+        atualizarTela();
+        localStorage.setItem('dadosLoja', JSON.stringify(dados));
+        definirStatusConexao(true);
+        aoTerminar(true, venda);
+    }).catch(erro=>{
+        let msg = String((erro && erro.message) || erro);
+        if(msg.indexOf('ESTOQUE_INSUFICIENTE')===0){
+            let partes = msg.split(':');
+            aoTerminar(false, `"${partes[1]}" já não tem mais peças suficientes (outra venda levou primeiro). Só tem ${partes[2]} agora.`);
+        } else {
+            definirStatusConexao(false);
+            aoTerminar(false, 'Sem conexão com o servidor central agora. A venda NÃO foi enviada — verifique a internet e tente de novo.');
+        }
+    });
+}
+
+function concluirVenda(){
+    let nome = document.getElementById('cli-nome').value.trim();
+    let tel = document.getElementById('cli-tel').value.trim();
+    if(!nome) return (marcarInvalido('cli-nome'), mostrarToast('Informe o nome completo do cliente.', 'erro'));
+    if(!tel) return (marcarInvalido('cli-tel'), mostrarToast('Informe o WhatsApp do cliente.', 'erro'));
+
+    if(carrinho.length===0) return mostrarToast('Adicione ao menos um produto ao carrinho antes de concluir a venda.', 'erro');
+
+    let tipoPag = document.getElementById('tipo-pagamento').value;
+
+    let dataVendaISO = tipoPag==='vista' ? hojeISO() : document.getElementById('data-venda').value;
+    let dataVencISO = tipoPag==='vista' ? null : document.getElementById('data-vencimento').value;
+    if(tipoPag!=='vista' && !dataVencISO) return (marcarInvalido('data-vencimento'), mostrarToast('Informe a data de vencimento.', 'erro'));
+
+    let textoVenc = tipoPag==='vista' ? 'À VISTA' : new Date(dataVencISO+'T00:00:00').toLocaleDateString('pt-BR');
+    let cliente = {
+        nome: nome,
+        apelido: document.getElementById('cli-apelido').value.trim(),
+        telefone: tel,
+        rua: document.getElementById('cli-rua').value.trim(),
+        numero: document.getElementById('cli-numero').value.trim(),
+        bairro: document.getElementById('cli-bairro').value.trim(),
+        cidade: document.getElementById('cli-cidade').value.trim()
+    };
+    let observacao = document.getElementById('obs').value;
+
+    let btn = document.getElementById('btn-concluir-venda');
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Registrando...'; }
+
+    // Lê o desconto e o carrinho ANTES de mandar pro servidor (o formulário é limpo assim que a venda é confirmada)
+    let descontoTipo = document.getElementById('desconto-tipo').value;
+    let descontoValorDigitado = Number(document.getElementById('desconto-valor').value) || 0;
+    let itensPedido = carrinho.map(i=>({...i}));
+
+    registrarVendaSeguraCarrinho(itensPedido, (produtosAtuais)=>{
+        // Preço de cada item vem sempre do estoque no momento de gravar — nunca digitado na hora
+        let itensFinais = itensPedido.map((item,i)=>({
+            idProduto: item.idProduto,
+            descricao: `${produtosAtuais[i].tipo} — ${produtosAtuais[i].descricao} ${produtosAtuais[i].tamanho}`,
+            quantidade: item.quantidade,
+            precoUnitario: produtosAtuais[i].precoUnitario,
+            subtotal: item.quantidade * produtosAtuais[i].precoUnitario
+        }));
+        let subtotal = itensFinais.reduce((s,i)=>s+i.subtotal, 0);
+        let descontoAplicado = 0;
+        if(descontoTipo === 'valor') descontoAplicado = descontoValorDigitado;
+        else if(descontoTipo === 'percentual') descontoAplicado = subtotal * (descontoValorDigitado/100);
+        descontoAplicado = Math.max(0, Math.min(descontoAplicado, subtotal));
+        let valorTotal = subtotal - descontoAplicado;
+
+        let qtdTotal = itensFinais.reduce((s,i)=>s+i.quantidade, 0);
+        let valorEntrada = tipoPag==='com-entrada' ? (Number(document.getElementById('valor-entrada').value)||0) : 0;
+        return {
+            id: Date.now(),
+            cliente: cliente,
+            itens: itensFinais,
+            produto: itensFinais.map(i=>`${i.descricao} (x${i.quantidade})`).join(', '),
+            quantidade: qtdTotal,
+            valorSubtotal: subtotal,
+            desconto: descontoAplicado,
+            valorTotal: valorTotal,
+            valorEntrada: valorEntrada,
+            valorPago: valorEntrada,
+            pagamentos: valorEntrada>0 ? [{data: hojeISO(), valor: valorEntrada}] : [],
+            tipoPagamento: tipoPag,
+            dataVenda: dataVendaISO,
+            dataVencimento: dataVencISO,
+            textoVencimento: textoVenc,
+            observacao: observacao
+        };
+    }, (sucesso, resultado)=>{
+        if(btn){ btn.disabled = false; btn.innerHTML = '✅ CONCLUIR VENDA E BAIXAR DO ESTOQUE'; }
+        if(sucesso){
+            mostrarToast(`Venda registrada: R$ ${resultado.valorTotal.toFixed(2)} — vencimento ${textoVenc}.`, 'sucesso');
+            limparFormVenda();
+        } else {
+            mostrarToast(resultado, 'erro');
+        }
+    });
+}
+
+function editarVenda(id){ editandoVendaId = id; atualizarTela(); }
+function cancelarEdicaoVenda(){ editandoVendaId = null; atualizarTela(); }
+
+// Corrige dados do cliente, o vencimento ou a observação de uma venda já registrada
+function salvarEdicaoVenda(id){
+    let v = dados.vendas.find(x=>x.id===id);
+    if(!v) return;
+
+    let nome = document.getElementById(`edv-nome-${id}`).value.trim();
+    let tel = document.getElementById(`edv-tel-${id}`).value.trim();
+    if(!nome) return (marcarInvalido(`edv-nome-${id}`), mostrarToast('Informe o nome do cliente.', 'erro'));
+    if(!tel) return (marcarInvalido(`edv-tel-${id}`), mostrarToast('Informe o WhatsApp do cliente.', 'erro'));
+
+    v.cliente.nome = nome;
+    v.cliente.apelido = document.getElementById(`edv-apelido-${id}`).value.trim();
+    v.cliente.telefone = tel;
+    v.cliente.rua = document.getElementById(`edv-rua-${id}`).value.trim();
+    v.cliente.numero = document.getElementById(`edv-numero-${id}`).value.trim();
+    v.cliente.bairro = document.getElementById(`edv-bairro-${id}`).value.trim();
+    v.cliente.cidade = document.getElementById(`edv-cidade-${id}`).value.trim();
+
+    let novaVenc = document.getElementById(`edv-venc-${id}`).value;
+    if(novaVenc){
+        v.dataVencimento = novaVenc;
+        v.textoVencimento = new Date(novaVenc+'T00:00:00').toLocaleDateString('pt-BR');
+    }
+    v.observacao = document.getElementById(`edv-obs-${id}`).value;
+
+    atualizarTela();
+    salvar();
+    mostrarToast('Dados da venda corrigidos com sucesso.', 'sucesso');
+}
+
+// Registra um pagamento (total ou parcial) recebido de uma venda a prazo
+function registrarPagamento(id){
+    let v = dados.vendas.find(x=>x.id===id);
+    if(!v) return;
+    let campo = document.getElementById(`edv-pagamento-${id}`);
+    let valor = Number(campo.value);
+    if(!valor || valor<=0) return (marcarInvalido(`edv-pagamento-${id}`), mostrarToast('Informe um valor de pagamento válido.', 'erro'));
+
+    let saldoAtual = v.valorTotal - (v.valorPago||0);
+    if(valor > saldoAtual + 0.01){
+        mostrarToast(`O saldo era só R$ ${saldoAtual.toFixed(2)} — registrei esse valor.`, 'info');
+        valor = saldoAtual;
+    }
+
+    v.valorPago = (v.valorPago||0) + valor;
+    v.pagamentos = v.pagamentos || [];
+    v.pagamentos.push({data: hojeISO(), valor: valor});
+    campo.value = '';
+
+    let quitado = (v.valorTotal - v.valorPago) <= 0.01;
+    if(quitado){
+        editandoVendaId = null; // a venda sai da lista de "a receber", então fecha a edição
+        mostrarToast('Pagamento registrado — venda quitada! 🎉', 'sucesso');
+    } else {
+        mostrarToast(`Pagamento de R$ ${valor.toFixed(2)} registrado. Saldo: R$ ${(v.valorTotal-v.valorPago).toFixed(2)}.`, 'sucesso');
+    }
+
+    atualizarTela();
+    salvar();
+}
+
+// Exclui uma venda — usada tanto na lista de "quem deve" quanto na de "quem já pagou"
+function excluirVenda(id){
+    let v = dados.vendas.find(x=>x.id===id);
+    if(!v) return;
+    confirmarExclusao(`Excluir a venda de "${v.cliente.nome}" (${v.produto})?\nEssa ação não pode ser desfeita. A quantidade não volta sozinha para o estoque — ajuste manualmente se precisar.`, ()=>{
+        dados.vendas = dados.vendas.filter(x=>x.id!==id);
+        if(editandoVendaId===id) editandoVendaId = null;
+        atualizarTela();
+        salvar();
+        mostrarToast('Venda excluída.', 'sucesso');
+    });
+}
+
+// ---------- Chaves Pix e geração do QR Code (padrão BR Code / Pix Copia e Cola) ----------
+let editandoPixId = null;
+let pixIdAtual = null;
+
+function rotuloTipoPix(tipo){
+    return {telefone:'Telefone', cpf:'CPF', cnpj:'CNPJ', email:'E-mail', aleatoria:'Chave aleatória'}[tipo] || tipo;
+}
+
+function mascaraChavePix(p){
+    if(p.tipo==='telefone'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length>=10) return `(${d.slice(-11,-9)}) ${d.slice(-9,-4)}-${d.slice(-4)}`;
+    }
+    if(p.tipo==='cnpj'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length===14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    if(p.tipo==='cpf'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length===11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return p.chave;
+}
+
+function adicionarChavePixNova(){
+    let novo = {id:Date.now(), nome:'', tipo:'telefone', chave:'', cidade:'BRASIL', novo:true};
+    dados.pixChaves.push(novo);
+    editandoPixId = novo.id;
+    atualizarTela();
+}
+
+function salvarChavePix(id){
+    let p = dados.pixChaves.find(x=>x.id===id);
+    if(!p) return;
+    let nome = document.getElementById(`pix-nome-${id}`).value.trim();
+    let tipo = document.getElementById(`pix-tipo-${id}`).value;
+    let chave = document.getElementById(`pix-chave-${id}`).value.trim();
+    let cidade = document.getElementById(`pix-cidade-${id}`).value.trim() || 'BRASIL';
+    if(!nome) return mostrarToast('Informe o nome do recebedor.', 'erro');
+    if(!chave) return mostrarToast('Informe a chave Pix.', 'erro');
+    p.nome = nome; p.tipo = tipo; p.chave = chave; p.cidade = cidade;
+    delete p.novo;
+    editandoPixId = null;
+    atualizarTela();
+    salvar();
+    mostrarToast('Chave Pix salva.', 'sucesso');
+}
+
+function cancelarEdicaoPix(id){
+    let p = dados.pixChaves.find(x=>x.id===id);
+    if(p && p.novo){ dados.pixChaves = dados.pixChaves.filter(x=>x.id!==id); }
+    editandoPixId = null;
+    atualizarTela();
+}
+
+function excluirChavePix(id){
+    let p = dados.pixChaves.find(x=>x.id===id);
+    if(!p) return;
+    confirmarExclusao(`Excluir a chave Pix de "${p.nome}"?`, ()=>{
+        dados.pixChaves = dados.pixChaves.filter(x=>x.id!==id);
+        if(editandoPixId===id) editandoPixId = null;
+        atualizarTela();
+        salvar();
+        mostrarToast('Chave Pix excluída.', 'sucesso');
+    });
+}
+
+// Tira acentos/caracteres especiais — o padrão do Pix só aceita letras sem acento, números e espaço
+function textoPix(txt, tamanhoMax){
+    let limpo = (txt||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();
+    return (limpo.substring(0, tamanhoMax)) || 'NAO INFORMADO';
+}
+
+function formatarChavePixParaPayload(p){
+    let bruto = (p.chave||'').trim();
+    if(p.tipo==='telefone'){
+        let d = bruto.replace(/\D/g,'');
+        if(d.startsWith('55') && d.length>11) return '+'+d;
+        return '+55'+d;
+    }
+    if(p.tipo==='cpf' || p.tipo==='cnpj') return bruto.replace(/\D/g,'');
+    if(p.tipo==='email') return bruto.toLowerCase();
+    return bruto; // chave aleatória: usa como digitada
+}
+
+// CRC16/CCITT-FALSE — exigido pelo padrão do Banco Central pra fechar o código Pix
+function crc16Pix(payload){
+    let polinomio = 0x1021, resultado = 0xFFFF;
+    for(let i=0; i<payload.length; i++){
+        resultado ^= (payload.charCodeAt(i) << 8);
+        for(let b=0; b<8; b++){
+            resultado = (resultado & 0x8000) ? ((resultado<<1) ^ polinomio) & 0xFFFF : (resultado<<1) & 0xFFFF;
+        }
+    }
+    return resultado.toString(16).toUpperCase().padStart(4,'0');
+}
+
+function tlvPix(id, valor){
+    return id + String(valor.length).padStart(2,'0') + valor;
+}
+
+// Monta o código "Pix Copia e Cola" (padrão BR Code do Banco Central) a partir da chave e, opcionalmente, um valor fixo
+function montarPayloadPix(p, valor){
+    let gui = tlvPix('00','BR.GOV.BCB.PIX');
+    let chaveTlv = tlvPix('01', formatarChavePixParaPayload(p));
+    let mai = tlvPix('26', gui + chaveTlv);
+    let nome = textoPix(p.nome, 25);
+    let cidade = textoPix(p.cidade, 15);
+    let valorNum = Number(valor);
+    let partes =
+        tlvPix('00','01') +
+        tlvPix('01','11') +
+        mai +
+        tlvPix('52','0000') +
+        tlvPix('53','986') +
+        (valorNum > 0 ? tlvPix('54', valorNum.toFixed(2)) : '') +
+        tlvPix('58','BR') +
+        tlvPix('59', nome) +
+        tlvPix('60', cidade) +
+        tlvPix('62', tlvPix('05','***')) +
+        '6304';
+    return partes + crc16Pix(partes);
+}
+
+function abrirQrPix(id){
+    pixIdAtual = id;
+    let p = dados.pixChaves.find(x=>x.id===id);
+    if(!p) return;
+    document.getElementById('pixNomeRecebedor').textContent = `${p.nome} — ${rotuloTipoPix(p.tipo)}: ${mascaraChavePix(p)}`;
+    document.getElementById('pix-valor-modal').value = '';
+    document.getElementById('modalPix').classList.remove('oculto');
+    gerarQrPixAgora();
+}
+
+function fecharModalPix(){
+    document.getElementById('modalPix').classList.add('oculto');
+    pixIdAtual = null;
+}
+
+function gerarQrPixAgora(){
+    let p = dados.pixChaves.find(x=>x.id===pixIdAtual);
+    if(!p) return;
+    let valor = document.getElementById('pix-valor-modal').value;
+    let codigo = montarPayloadPix(p, valor);
+    document.getElementById('pix-codigo-texto').value = codigo;
+
+    let container = document.getElementById('pix-qr-container');
+    container.innerHTML = '';
+    if(typeof QRCode !== 'undefined'){
+        try {
+            new QRCode(container, { text: codigo, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+            return;
+        } catch(e){ /* se falhar, cai no aviso abaixo */ }
+    }
+    container.innerHTML = `<p class="detalhe" style="text-align:center;">Não consegui desenhar o QR Code agora (sem internet pra carregar o desenho) — mas o código abaixo funciona igual: copie e cole no seu banco.</p>`;
+}
+
+function copiarCodigoPix(){
+    let campo = document.getElementById('pix-codigo-texto');
+    campo.focus();
+    campo.select();
+    campo.setSelectionRange(0, 99999);
+    let copiado = false;
+    try {
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(campo.value);
+            copiado = true;
+        }
+    } catch(e){}
+    if(!copiado){
+        try { copiado = document.execCommand('copy'); } catch(e){}
+    }
+    mostrarToast(copiado ? 'Código Pix copiado! Agora é só colar no seu banco.' : 'Não consegui copiar sozinho — o texto já está selecionado, copie manualmente.', copiado ? 'sucesso' : 'info');
+}
+
+function renderizarPix(){
+    let lista = document.getElementById('lista-pix');
+    if(!lista) return;
+    lista.innerHTML = '';
+    if(!dados.pixChaves || dados.pixChaves.length===0){
+        lista.innerHTML = `<div class="vazio">📭 Nenhuma chave Pix cadastrada.</div>`;
+        return;
+    }
+    dados.pixChaves.forEach(p=>{
+        if(editandoPixId===p.id){
+            lista.innerHTML += `
+            <div class="card">
+                <label class="campo">Nome do recebedor</label>
+                <input type="text" id="pix-nome-${p.id}" value="${p.nome}">
+                <div class="linha">
+                    <div class="col">
+                        <label class="campo">Tipo da chave</label>
+                        <select id="pix-tipo-${p.id}">
+                            <option value="telefone" ${p.tipo==='telefone'?'selected':''}>Telefone</option>
+                            <option value="cpf" ${p.tipo==='cpf'?'selected':''}>CPF</option>
+                            <option value="cnpj" ${p.tipo==='cnpj'?'selected':''}>CNPJ</option>
+                            <option value="email" ${p.tipo==='email'?'selected':''}>E-mail</option>
+                            <option value="aleatoria" ${p.tipo==='aleatoria'?'selected':''}>Chave aleatória</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="campo">Chave Pix</label>
+                        <input type="text" id="pix-chave-${p.id}" value="${p.chave}">
+                    </div>
+                </div>
+                <label class="campo">Cidade do recebedor</label>
+                <input type="text" id="pix-cidade-${p.id}" value="${p.cidade||''}">
+                <div class="linha">
+                    <div class="col"><button class="btn btn-sucesso" onclick="salvarChavePix(${p.id})">✅ Salvar</button></div>
+                    <div class="col"><button class="btn btn-cancelar" onclick="cancelarEdicaoPix(${p.id})">Cancelar</button></div>
+                </div>
+                ${p.novo ? '' : `<button class="btn btn-perigo mt-1" onclick="excluirChavePix(${p.id})">🗑️ Excluir chave</button>`}
+            </div>`;
+        } else {
+            lista.innerHTML += `
+            <div class="card">
+                <div class="flex justify-between items-center gap-3">
+                    <div>
+                        <b>${p.nome}</b>
+                        <div class="detalhe">${rotuloTipoPix(p.tipo)}: ${mascaraChavePix(p)}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn-editar" onclick="editandoPixId=${p.id}; atualizarTela();" title="Editar">✏️</button>
+                        <button class="btn-excluir" onclick="excluirChavePix(${p.id})" title="Excluir">🗑️</button>
+                    </div>
+                </div>
+                <button class="btn btn-principal mt-2" onclick="abrirQrPix(${p.id})">📷 Gerar QR Code para Pagamento</button>
+            </div>`;
+        }
+    });
+}
+
+function linkWhatsApp(v){
+    let numero = v.cliente.telefone.replace(/\D/g,'');
+    if(numero.length<=11) numero = '55'+numero;
+    let quando = v.tipoPagamento==='vencido' ? 'venceu' : 'vence';
+    let msg = `Olá ${v.cliente.apelido || v.cliente.nome}! Passando para lembrar sobre sua compra (${v.produto}), no valor de R$ ${v.valorTotal.toFixed(2)}, com vencimento em ${v.textoVencimento}. Qualquer coisa estou à disposição! 😊`;
+    return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
+}
+
+function atualizarTela(){
+    renderizarVendedores();
+    // Lista produtos na venda
+    let selProd = document.getElementById('produto-venda'); selProd.innerHTML='';
+    dados.estoque.filter(p=>p.quantidade>0).forEach(p=>selProd.innerHTML += `<option value="${p.id}">${p.tipo} ${p.descricao} ${p.tamanho} — R$${p.precoUnitario.toFixed(2)}</option>`);
+    atualizarDadosProduto();
+    renderizarPix();
+
+    // Mostra Estoque
+    let listaEst = document.getElementById('lista-estoque'); listaEst.innerHTML='';
+    if(dados.estoque.length===0){
+        listaEst.innerHTML = `<div class="vazio"><span>📦</span>Nenhum item cadastrado ainda.</div>`;
+    }
+    dados.estoque.forEach(p=>{
+        if(modoEdicao && editandoEstoqueId===p.id){
+            listaEst.innerHTML += `
+            <div class="card">
+                <div class="secao-titulo"><span>✏️</span> Ajustar item do estoque</div>
+                <label class="campo">Tipo</label>
+                <select id="edit-tipo-${p.id}">
+                    ${TIPOS_PRODUTO.map(t=>`<option ${t===p.tipo?'selected':''}>${t}</option>`).join('')}
+                </select>
+                <div class="linha">
+                    <div class="col"><label class="campo">Cor / Modelo</label><input type="text" id="edit-desc-${p.id}" value="${p.descricao}"></div>
+                    <div class="col"><label class="campo">Tamanho</label><input type="text" id="edit-tam-${p.id}" value="${p.tamanho}"></div>
+                </div>
+                <div class="linha">
+                    <div class="col"><label class="campo">Quantidade</label><input type="number" id="edit-qtd-${p.id}" value="${p.quantidade}"></div>
+                    <div class="col"><label class="campo">Preço unitário R$</label><input type="number" step="0.01" id="edit-preco-${p.id}" value="${p.precoUnitario}"></div>
+                </div>
+                <div class="linha">
+                    <div class="col"><button class="btn btn-sucesso" onclick="salvarEdicaoEstoque(${p.id})"><span>✅</span> Salvar ajuste</button></div>
+                    <div class="col"><button class="btn btn-cancelar" onclick="cancelarEdicaoEstoque()">Cancelar</button></div>
+                </div>
+                <button class="btn btn-perigo mt-1" onclick="excluirEstoque(${p.id})"><span>🗑️</span> Excluir item do estoque</button>
+            </div>`;
+        } else {
+            listaEst.innerHTML += `
+            <div class="card">
+                <div class="flex justify-between items-center gap-3">
+                    <div><b>${p.tipo}</b> — ${p.descricao} | ${p.tamanho}<br>Quantidade: ${p.quantidade} peças | R$ ${p.precoUnitario.toFixed(2)} cada</div>
+                    ${modoEdicao ? `<div class="flex gap-2">
+                        <button class="btn-editar" onclick="editarEstoque(${p.id})" title="Ajustar"><span>✏️</span></button>
+                        <button class="btn-excluir" onclick="excluirEstoque(${p.id})" title="Excluir"><span>🗑️</span></button>
+                    </div>` : ''}
+                </div>
+            </div>`;
+        }
+    });
+
+    // Mostra Vendas a Prazo em aberto (com saldo devedor), ordenadas por vencimento
+    let listaCob = document.getElementById('lista-cobrancas'); listaCob.innerHTML='';
+    let hoje = new Date(); hoje.setHours(0,0,0,0);
+    let prazos = dados.vendas.filter(v=>v.tipoPagamento!=='vista' && v.dataVencimento && (v.valorTotal-(v.valorPago||0))>0.01).map(v=>{
+        let venc = new Date(v.dataVencimento+'T00:00:00');
+        let dias = Math.round((venc - hoje)/86400000);
+        return {v, dias};
+    }).sort((a,b)=>a.dias-b.dias);
+
+    if(prazos.length===0){
+        listaCob.innerHTML = `<div class="vazio"><span>✅</span>Nenhuma venda a prazo em aberto.</div>`;
+    }
+
+    prazos.forEach(({v,dias})=>{
+        let classe='v-prazo', aviso='';
+        if(dias<0) {classe='v-vencido'; aviso=`<span class="aviso bg-red-100 text-red-800">VENCIDA HÁ ${Math.abs(dias)}D</span>`;}
+        else if(dias===0) {classe='v-vence-hoje'; aviso='<span class="aviso bg-amber-100 text-amber-800">VENCE HOJE</span>';}
+        else if(dias<=7) {classe='v-vence-hoje'; aviso=`<span class="aviso bg-amber-100 text-amber-800">Vence em ${dias}d</span>`;}
+        else {aviso=`<span class="aviso bg-purple-100 text-purple-800">Vence em ${dias}d</span>`;}
+
+        let iniciais = v.cliente.nome.trim().split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+        let dataVendaFmt = v.dataVenda ? new Date(v.dataVenda+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+        let pago = v.valorPago||0;
+        let saldo = v.valorTotal - pago;
+        let saldoInfo = pago>0 ? `<div class="detalhe">Pago até agora: R$ ${pago.toFixed(2)} | Saldo: <b>R$ ${saldo.toFixed(2)}</b></div>` : '';
+
+        listaCob.innerHTML += `
+        <div class="card ${classe}">
+            <div class="flex justify-between items-start gap-2">
+                <div class="linha-cliente" style="flex:1;">
+                    <div class="avatar">${iniciais}</div>
+                    <div>
+                        <b>${v.cliente.nome}</b>${v.cliente.apelido?` <span class="text-sm text-gray-500">"${v.cliente.apelido}"</span>`:''} ${aviso}
+                        <div class="detalhe">${v.produto} — Qtd: ${v.quantidade}</div>
+                    </div>
+                </div>
+                ${modoEdicao ? `<div class="flex gap-2">
+                    <button class="btn-editar" onclick="editarVenda(${v.id})" title="Corrigir dados / registrar pagamento"><span>✏️</span></button>
+                    <button class="btn-excluir" onclick="excluirVenda(${v.id})" title="Excluir venda"><span>🗑️</span></button>
+                </div>` : ''}
+            </div>
+            <div class="mt-2">
+                <div>Valor total: <b>R$ ${v.valorTotal.toFixed(2)}</b></div>
+                ${v.desconto>0 ? `<div class="detalhe">Subtotal: R$ ${v.valorSubtotal.toFixed(2)} — Desconto: R$ ${v.desconto.toFixed(2)}</div>` : ''}
+                ${saldoInfo}
+                <div class="detalhe">Venda: ${dataVendaFmt} → Vencimento: <b>${v.textoVencimento}</b></div>
+                <div class="detalhe"><span>📍</span> ${formatarEndereco(v.cliente)}</div>
+                <div class="detalhe"><span>📲</span> ${v.cliente.telefone}</div>
+            </div>
+            <a href="${linkWhatsApp(v)}" target="_blank" class="btn btn-whats mt-2"><span>📲</span> Cobrar no WhatsApp</a>
+            ${(modoEdicao && editandoVendaId===v.id) ? `
+            <div class="caixa-pagamento">
+                <div class="secao-titulo"><span>👤</span> Corrigir dados do cliente</div>
+                <label class="campo">Nome completo</label>
+                <input type="text" id="edv-nome-${v.id}" value="${v.cliente.nome}">
+                <div class="linha">
+                    <div class="col"><label class="campo">Apelido</label><input type="text" id="edv-apelido-${v.id}" value="${v.cliente.apelido||''}"></div>
+                    <div class="col"><label class="campo">WhatsApp</label><input type="tel" id="edv-tel-${v.id}" value="${v.cliente.telefone}" oninput="mascaraTelefone(this)"></div>
+                </div>
+                <div class="linha">
+                    <div class="col" style="flex:2;"><label class="campo">Rua / Avenida</label><input type="text" id="edv-rua-${v.id}" value="${v.cliente.rua||''}"></div>
+                    <div class="col-sm"><label class="campo">Número</label><input type="text" id="edv-numero-${v.id}" value="${v.cliente.numero||''}"></div>
+                </div>
+                <div class="linha">
+                    <div class="col"><label class="campo">Bairro</label><input type="text" id="edv-bairro-${v.id}" value="${v.cliente.bairro||''}"></div>
+                    <div class="col"><label class="campo">Cidade</label><input type="text" id="edv-cidade-${v.id}" value="${v.cliente.cidade||''}"></div>
+                </div>
+                <label class="campo">Data de vencimento</label>
+                <input type="date" id="edv-venc-${v.id}" value="${v.dataVencimento||''}">
+                <label class="campo">Observação</label>
+                <textarea id="edv-obs-${v.id}">${v.observacao||''}</textarea>
+                <button class="btn btn-principal" onclick="salvarEdicaoVenda(${v.id})"><span>✅</span> Salvar correções</button>
+
+                <div class="secao-titulo"><span>💵</span> Registrar Pagamento</div>
+                <p class="detalhe">Total: R$ ${v.valorTotal.toFixed(2)} | Pago: R$ ${pago.toFixed(2)} | Saldo: R$ ${saldo.toFixed(2)}</p>
+                <div class="linha">
+                    <div class="col"><input type="number" step="0.01" id="edv-pagamento-${v.id}" placeholder="Valor recebido agora R$"></div>
+                    <div class="col"><button class="btn btn-sucesso" onclick="registrarPagamento(${v.id})"><span>✅</span> Registrar</button></div>
+                </div>
+                <button class="btn btn-cancelar" onclick="cancelarEdicaoVenda()">Fechar edição</button>
+                <button class="btn btn-perigo mt-1" onclick="excluirVenda(${v.id})"><span>🗑️</span> Excluir esta venda</button>
+            </div>` : ''}
+        </div>`;
+    });
+
+    // Mostra Vendas à Vista (inclui as feitas pelo app do vendedor), mais recentes primeiro
+    let listaVista = document.getElementById('lista-vista');
+    if(listaVista){
+        listaVista.innerHTML = '';
+        let vendasVista = dados.vendas.filter(v=>v.tipoPagamento==='vista').sort((a,b)=>b.id-a.id);
+        if(vendasVista.length===0){
+            listaVista.innerHTML = `<div class="vazio"><span>💵</span>Nenhuma venda à vista registrada ainda.</div>`;
+        }
+        vendasVista.forEach(v=>{
+            let iniciais = v.cliente.nome.trim().split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+            let dataVendaFmt = v.dataVenda ? new Date(v.dataVenda+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+            listaVista.innerHTML += `
+            <div class="card">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="linha-cliente" style="flex:1;">
+                        <div class="avatar">${iniciais}</div>
+                        <div>
+                            <b>${v.cliente.nome}</b>${v.cliente.apelido?` <span class="text-sm text-gray-500">"${v.cliente.apelido}"</span>`:''}
+                            <div class="detalhe">${v.produto} — Qtd: ${v.quantidade}</div>
+                        </div>
+                    </div>
+                    ${modoEdicao ? `<div class="flex gap-2">
+                        <button class="btn-excluir" onclick="excluirVenda(${v.id})" title="Excluir venda"><span>🗑️</span></button>
+                    </div>` : ''}
+                </div>
+                <div class="mt-2">
+                    <div>Valor total: <b>R$ ${v.valorTotal.toFixed(2)}</b></div>
+                    ${v.desconto>0 ? `<div class="detalhe">Subtotal: R$ ${v.valorSubtotal.toFixed(2)} — Desconto: R$ ${v.desconto.toFixed(2)}</div>` : ''}
+                    <div class="detalhe">Venda: ${dataVendaFmt}</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // Mostra Quem Já Pagou (vendas a prazo totalmente quitadas)
+    let listaQuit = document.getElementById('lista-quitados');
+    if(listaQuit){
+        listaQuit.innerHTML = '';
+        let quitadas = dados.vendas.filter(v => v.tipoPagamento!=='vista' && v.dataVencimento && (v.valorPago||0)>0 && (v.valorTotal-(v.valorPago||0))<=0.01);
+        quitadas.sort((a,b)=>{
+            let da = (a.pagamentos && a.pagamentos.length) ? a.pagamentos[a.pagamentos.length-1].data : (a.dataVenda||'');
+            let dbb = (b.pagamentos && b.pagamentos.length) ? b.pagamentos[b.pagamentos.length-1].data : (b.dataVenda||'');
+            return dbb.localeCompare(da);
+        });
+        if(quitadas.length===0){
+            listaQuit.innerHTML = `<div class="vazio"><span>📭</span>Nenhuma venda a prazo quitada ainda.</div>`;
+        }
+        quitadas.forEach(v=>{
+            let dataQuit = (v.pagamentos && v.pagamentos.length) ? new Date(v.pagamentos[v.pagamentos.length-1].data+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+            let iniciais = v.cliente.nome.trim().split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+            listaQuit.innerHTML += `
+            <div class="card v-vista">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="linha-cliente" style="flex:1;">
+                        <div class="avatar" style="background:linear-gradient(135deg,#2E7D32,#388E3C);">${iniciais}</div>
+                        <div>
+                            <b>${v.cliente.nome}</b>${v.cliente.apelido?` <span class="text-sm text-gray-500">"${v.cliente.apelido}"</span>`:''} <span class="aviso bg-green-100 text-green-800">QUITADA</span>
+                            <div class="detalhe">${v.produto} — Qtd: ${v.quantidade}</div>
+                        </div>
+                    </div>
+                    ${modoEdicao ? `<button class="btn-excluir" onclick="excluirVenda(${v.id})" title="Excluir"><span>🗑️</span></button>` : ''}
+                </div>
+                <div class="mt-2">
+                    <div>Valor pago: <b>R$ ${v.valorPago.toFixed(2)}</b></div>
+                    <div class="detalhe">Venda: ${v.dataVenda?new Date(v.dataVenda+'T00:00:00').toLocaleDateString('pt-BR'):'—'} → Quitada em: <b>${dataQuit}</b></div>
+                    <div class="detalhe"><span>📲</span> ${v.cliente.telefone}</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // Atualiza Relatório
+    let tV=0, tVista=0, t30=0, t60=0, tEnt=0, aReceber=0, recebidoPrazo=0;
+    dados.vendas.forEach(v=>{
+        tV+=v.valorTotal;
+        if(v.tipoPagamento==='vista') tVista+=v.valorTotal;
+        else if(v.tipoPagamento==='30') t30+=v.valorTotal;
+        else if(v.tipoPagamento==='60') t60+=v.valorTotal;
+        else if(v.tipoPagamento==='com-entrada') tEnt+=v.valorTotal;
+        if(v.tipoPagamento!=='vista'){
+            let pago = v.valorPago||0;
+            aReceber += Math.max(0, v.valorTotal - pago);
+            recebidoPrazo += pago;
+        }
+    });
+    document.getElementById('r-total').textContent = tV.toFixed(2);
+    document.getElementById('r-vista').textContent = tVista.toFixed(2);
+    document.getElementById('r-30').textContent = t30.toFixed(2);
+    document.getElementById('r-60').textContent = t60.toFixed(2);
+    document.getElementById('r-entrada').textContent = tEnt.toFixed(2);
+    document.getElementById('r-recebido-prazo').textContent = recebidoPrazo.toFixed(2);
+    document.getElementById('r-receber').textContent = aReceber.toFixed(2);
+}
+
+function salvar(){
+    localStorage.setItem('dadosLoja', JSON.stringify(dados));
+    if (!db) { definirStatusConexao(false); return; }
+    db.collection('lojaDados').doc('principal').set(dados)
+        .then(()=> definirStatusConexao(true))
+        .catch(()=> {
+            definirStatusConexao(false);
+            mostrarToast('Sem conexão com o servidor central. Salvo apenas neste aparelho.', 'info');
+        });
+}
+
+let appJaIniciado = false;
+function iniciarApp(){
+    if(appJaIniciado) return;
+    appJaIniciado = true;
+
+    renderizarCarrinho();
+
+    modoEdicao = localStorage.getItem('modoEdicaoAtivo') === '1';
+    let chk = document.getElementById('chk-modo-edicao');
+    if(chk) chk.checked = modoEdicao;
+
+    let chkNotif = document.getElementById('chk-notificacoes');
+    if(chkNotif) chkNotif.checked = localStorage.getItem('notificacoesAtivas') === '1' &&
+        (typeof Notification === 'undefined' || Notification.permission === 'granted');
+
+    if(localStorage.getItem('dadosLoja')) dados = JSON.parse(localStorage.getItem('dadosLoja'));
+    normalizarDados();
+    atualizarTela();
+    verificarVencimentos();
+
+    // Reconfere os vencimentos periodicamente e sempre que o usuário voltar pro app
+    setInterval(()=>verificarVencimentos(), 60*60*1000);
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) verificarVencimentos(); });
+
+    if (!db) { definirStatusConexao(false); return; }
+
+    db.collection('lojaDados').doc('principal').onSnapshot(
+        doc=>{
+            definirStatusConexao(true);
+            if(doc.exists) dados = doc.data();
+            normalizarDados();
+            atualizarTela();
+        },
+        () => {
+            // Erro de permissão / rede: continua funcionando só com os dados salvos neste aparelho
+            definirStatusConexao(false);
+        }
+    );
+};
+
+// Registra o app como instalável (ícone, tela cheia, funciona offline).
+// Só funciona quando o arquivo está hospedado em um site (https) — dentro
+// de um simples preview de arquivo local isso é ignorado sem dar erro.
+if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('sw-matriz.js').catch(()=>{});
+    });
+}
+</script>
+</body>
+</html>
