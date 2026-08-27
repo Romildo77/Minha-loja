@@ -108,6 +108,13 @@
         <button class="btn btn-principal" onclick="fazerLogin()" id="btn-login">Entrar</button>
     </div>
 </div>
+<div class="tela-login oculto" id="telaLicencaBloqueada" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);">
+    <div class="caixa-login" style="text-align:center;">
+        <h1 style="color:#991b1b;">🔒 Licença inativa</h1>
+        <p id="msgLicenca">O acesso a este aplicativo está temporariamente bloqueado. Entre em contato com o suporte para regularizar.</p>
+        <button class="btn btn-cancelar mt-2" onclick="sair()">🚪 Sair</button>
+    </div>
+</div>
 <div id="appConteudo" class="oculto">
 <div id="toasts"></div>
 <div class="modal-confirmar oculto" id="modalConfirmar">
@@ -399,6 +406,23 @@ const firebaseConfig = {
     appId: "1:834153556948:web:49c1cb68dac612beee4441"
 };
 
+// ---------- Sistema de licença (controlado pelo app "Controle de Licenças") ----------
+// LOJA_ID identifica esta loja dentro do sistema de licenças. Cada loja/cliente que
+// usar este aplicativo precisa de um LOJA_ID diferente (combine com o suporte).
+const LOJA_ID = "minha-loja";
+
+// Config do projeto Firebase CENTRAL de licenças (diferente do projeto da loja acima).
+// Preencha depois de criar o projeto central — enquanto estiver vazio, a checagem de
+// licença é pulada e o app funciona normalmente (modo "ainda não configurado").
+const licencaConfig = {
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: ""
+};
+
 // Conecta ao servidor central se possível. Se o SDK não carregar (sem internet,
 // bloqueio de rede, visualizador restrito, etc.) o app continua funcionando
 // normalmente, salvando neste aparelho.
@@ -409,6 +433,33 @@ try {
     }
 } catch (e) {
     db = null;
+}
+
+// Verifica se a licença desta loja está ativa, consultando o projeto central (só leitura).
+// Política de segurança: se não der pra consultar (sem internet, projeto ainda não
+// configurado), o app libera o acesso normalmente — só bloqueia de verdade quando o
+// sistema central confirma explicitamente que a licença está vencida ou desativada.
+function verificarLicenca(aoTerminar){
+    if(!licencaConfig.apiKey){ aoTerminar(true); return; } // sistema de licença ainda não configurado
+    try{
+        let appLicenca = firebase.apps.find(a=>a.name==='licenca') || firebase.initializeApp(licencaConfig, 'licenca');
+        appLicenca.firestore().collection('licencas').doc(LOJA_ID).get().then(doc=>{
+            if(!doc.exists){ aoTerminar(true); return; } // loja ainda não cadastrada no painel: libera
+            let dadosLicenca = doc.data();
+            let hoje = hojeISO();
+            let ativa = dadosLicenca.ativa !== false;
+            let dentroDoPrazo = !dadosLicenca.vencimento || dadosLicenca.vencimento >= hoje;
+            let liberado = ativa && dentroDoPrazo;
+            localStorage.setItem('ultimaChecagemLicenca', JSON.stringify({liberado, quando: hoje}));
+            aoTerminar(liberado, ativa ? 'Licença vencida em ' + new Date(dadosLicenca.vencimento+'T00:00:00').toLocaleDateString('pt-BR') + '. Entre em contato para renovar.' : 'Licença desativada pelo suporte. Entre em contato para mais informações.');
+        }).catch(()=>{
+            // Sem conexão com o projeto central: usa a última checagem salva neste aparelho, se houver
+            let cache = JSON.parse(localStorage.getItem('ultimaChecagemLicenca') || 'null');
+            aoTerminar(cache ? cache.liberado : true);
+        });
+    } catch(e) {
+        aoTerminar(true);
+    }
 }
 
 // ---------- Login (Firebase Authentication) ----------
@@ -542,16 +593,26 @@ function removerTipoProduto(i){
     mostrarToast(`Tipo "${nome}" removido da lista (produtos já cadastrados com esse nome continuam normalmente).`, 'info');
 }
 
-// Só libera o app depois de confirmar o login. Enquanto não sabe se está logado,
-// mantém a tela de carregamento (login) visível pra não piscar conteúdo indevido.
+// Só libera o app depois de confirmar o login E a licença ativa. Enquanto não sabe se
+// está logado, mantém a tela de carregamento (login) visível pra não piscar conteúdo indevido.
 if (typeof firebase !== 'undefined' && firebase.auth) {
     firebase.auth().onAuthStateChanged(user=>{
         if(user){
             document.getElementById('telaLogin').classList.add('oculto');
-            document.getElementById('appConteudo').classList.remove('oculto');
-            iniciarApp();
+            document.getElementById('telaLicencaBloqueada').classList.add('oculto');
+            verificarLicenca((liberado, motivo)=>{
+                if(liberado){
+                    document.getElementById('appConteudo').classList.remove('oculto');
+                    iniciarApp();
+                } else {
+                    document.getElementById('appConteudo').classList.add('oculto');
+                    if(motivo) document.getElementById('msgLicenca').textContent = motivo;
+                    document.getElementById('telaLicencaBloqueada').classList.remove('oculto');
+                }
+            });
         } else {
             document.getElementById('appConteudo').classList.add('oculto');
+            document.getElementById('telaLicencaBloqueada').classList.add('oculto');
             document.getElementById('telaLogin').classList.remove('oculto');
         }
     });
@@ -1084,6 +1145,54 @@ function concluirVenda(){
 function editarVenda(id){ editandoVendaId = id; atualizarTela(); }
 function cancelarEdicaoVenda(){ editandoVendaId = null; atualizarTela(); }
 
+// Mostra/esconde os campos de vencimento e entrada conforme o tipo escolhido na correção
+function alternarCamposCorrecao(id){
+    let tipo = document.getElementById(`edv-tipo-${id}`).value;
+    document.getElementById(`edv-venc-container-${id}`).classList.toggle('hidden', tipo==='vista');
+    document.getElementById(`edv-entrada-container-${id}`).classList.toggle('hidden', tipo!=='com-entrada');
+}
+
+// Corrige uma venda registrada como "à vista" por engano, transformando em venda a prazo
+// (ou vice-versa), sem precisar excluir e recadastrar tudo de novo.
+function salvarCorrecaoTipoPagamento(id){
+    let v = dados.vendas.find(x=>x.id===id);
+    if(!v) return;
+
+    let novoTipo = document.getElementById(`edv-tipo-${id}`).value;
+
+    if(novoTipo === 'vista'){
+        v.tipoPagamento = 'vista';
+        v.dataVencimento = null;
+        v.textoVencimento = 'À VISTA';
+        v.valorPago = v.valorTotal;
+        v.pagamentos = [{data: hojeISO(), valor: v.valorTotal}];
+    } else {
+        let novaVenc = document.getElementById(`edv-venc-${id}`).value;
+        if(!novaVenc) return (marcarInvalido(`edv-venc-${id}`), mostrarToast('Informe a data de vencimento.', 'erro'));
+
+        v.tipoPagamento = novoTipo;
+        v.dataVencimento = novaVenc;
+        v.textoVencimento = new Date(novaVenc+'T00:00:00').toLocaleDateString('pt-BR');
+
+        if(novoTipo === 'com-entrada'){
+            let entrada = Number(document.getElementById(`edv-entrada-${id}`).value) || 0;
+            if(entrada > v.valorTotal) entrada = v.valorTotal;
+            v.valorPago = entrada;
+            v.pagamentos = entrada>0 ? [{data: hojeISO(), valor: entrada}] : [];
+        } else {
+            // Passou a ser "a prazo" puro: assume que nada foi pago ainda
+            v.valorPago = 0;
+            v.pagamentos = [];
+        }
+    }
+
+    editandoVendaId = null;
+    atualizarTela();
+    salvar();
+    mostrarToast('Forma de pagamento corrigida com sucesso.', 'sucesso');
+}
+
+
 // Corrige dados do cliente, o vencimento ou a observação de uma venda já registrada
 function salvarEdicaoVenda(id){
     let v = dados.vendas.find(x=>x.id===id);
@@ -1556,6 +1665,7 @@ function atualizarTela(){
                         </div>
                     </div>
                     ${modoEdicao ? `<div class="flex gap-2">
+                        <button class="btn-editar" onclick="editarVenda(${v.id})" title="Corrigir forma de pagamento"><span>✏️</span></button>
                         <button class="btn-excluir" onclick="excluirVenda(${v.id})" title="Excluir venda"><span>🗑️</span></button>
                     </div>` : ''}
                 </div>
@@ -1564,6 +1674,30 @@ function atualizarTela(){
                     ${v.desconto>0 ? `<div class="detalhe">Subtotal: R$ ${v.valorSubtotal.toFixed(2)} — Desconto: R$ ${v.desconto.toFixed(2)}</div>` : ''}
                     <div class="detalhe">Venda: ${dataVendaFmt}</div>
                 </div>
+                ${(modoEdicao && editandoVendaId===v.id) ? `
+                <div class="mt-3 pt-3" style="border-top:1px dashed var(--cor-borda);">
+                    <p class="detalhe mb-2">⚠️ Foi registrada como <b>à vista</b> por engano? Marque como a prazo:</p>
+                    <label class="campo">Vendi errado — corrigir para:</label>
+                    <select id="edv-tipo-${v.id}" onchange="alternarCamposCorrecao(${v.id})">
+                        <option value="vista">💵 À vista (manter como está)</option>
+                        <option value="30">📅 A prazo — 30 dias</option>
+                        <option value="60">📅 A prazo — 60 dias</option>
+                        <option value="com-entrada">💰 Com entrada + saldo</option>
+                    </select>
+                    <div id="edv-venc-container-${v.id}" class="hidden">
+                        <label class="campo">Nova data de vencimento</label>
+                        <input type="date" id="edv-venc-${v.id}">
+                    </div>
+                    <div id="edv-entrada-container-${v.id}" class="hidden">
+                        <label class="campo">Valor já pago de entrada</label>
+                        <input type="number" step="0.01" id="edv-entrada-${v.id}" placeholder="R$ 0,00">
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-sucesso" style="margin:0;" onclick="salvarCorrecaoTipoPagamento(${v.id})">✅ Salvar correção</button>
+                        <button class="btn btn-cancelar" style="margin:0;" onclick="cancelarEdicaoVenda()">Cancelar</button>
+                    </div>
+                </div>
+                ` : ''}
             </div>`;
         });
     }
