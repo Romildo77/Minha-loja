@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Loja Vendedor">
+    <meta name="theme-color" content="#2E7D32">
+    <title>Loja Profissional — Vendedor</title>
+    <link rel="manifest" href="manifest-vendedor.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Loja Vendas">
+    <link rel="apple-touch-icon" href="icon-vendedor-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {--cor-principal:#2E7D32; --cor-principal-clara:#43A047; --cor-prazo:#7B1FA2; --cor-alerta:#F57F17; --cor-vencido:#C62828; --cor-fundo:#f4f6fb; --cor-texto:#1e293b; --cor-borda:#e2e8f0;}
+        * {margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Roboto, sans-serif;}
+        body {background:var(--cor-fundo); color:var(--cor-texto); padding-bottom:40px; line-height:1.6;}
+        .card {background:#fff; border-radius:16px; padding:20px; margin:12px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border:1px solid var(--cor-borda);}
+        .secao-titulo {font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; margin:18px 0 8px; display:flex; align-items:center; gap:8px;}
+        .secao-titulo:first-child {margin-top:0;}
+        .btn {border-radius:10px; padding:14px; font-weight:600; border:none; cursor:pointer; width:100%; font-size:16px; margin:5px 0; transition:transform .1s;}
+        .btn:active {transform:scale(0.98);}
+        .btn-sucesso {background:linear-gradient(135deg, #2E7D32, #388E3C); color:white;}
+        .btn-cancelar {background:#e2e8f0; color:#334155;}
+        .btn[disabled] {opacity:0.7; cursor:not-allowed;}
+        .modal-confirmar {position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(15,23,42,0.55);}
+        .modal-confirmar.oculto {display:none;}
+        .modal-caixa {background:#fff; border-radius:18px; padding:26px 22px; max-width:360px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3); text-align:center;}
+        .item-pix-vendedor {display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid #f1f5f9;}
+        .item-pix-vendedor:last-child {border-bottom:none;}
+        .item-pix-vendedor button {width:auto; margin:0; padding:8px 14px; font-size:13px;}
+        .item-carrinho {display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:#f8fafc; border-radius:10px; margin-top:8px; border:1px solid var(--cor-borda);}
+        .item-carrinho .btn-remover-item {background:none; border:none; color:#C62828; font-size:18px; cursor:pointer; padding:4px 8px;}
+        input,select,textarea {width:100%; padding:13px; margin:6px 0; border:1px solid #cbd5e1; border-radius:10px; font-size:15px; background:#fbfcfe;}
+        input:focus,select:focus,textarea:focus {outline:none; border-color:var(--cor-principal); background:white; box-shadow:0 0 0 3px rgba(46,125,50,0.08);}
+        input.campo-invalido, select.campo-invalido {border-color:var(--cor-vencido); box-shadow:0 0 0 3px rgba(198,40,40,0.1);}
+        label.campo {font-size:12px; font-weight:600; color:#64748b; margin:4px 2px -2px; display:block;}
+        .linha {display:flex; gap:12px; flex-wrap:wrap;}
+        .col {flex:1; min-width:140px;}
+        .col-sm {flex:0 0 100px;}
+        header {background:linear-gradient(135deg, #2E7D32, #43A047); color:white; padding:15px; position:fixed; top:0; width:100%; z-index:100; display:flex; justify-content:space-between; align-items:center;}
+        .conteudo {margin-top:80px; padding:0 15px;}
+        .banner-offline {display:none; background:#fff3e0; color:#9a5b00; font-size:13px; font-weight:600; text-align:center; padding:10px 15px; border-bottom:2px solid #F57F17;}
+        .banner-offline.mostrar {display:block;}
+        .vazio {text-align:center; padding:24px 10px; color:#94a3b8;}
+        .preco-trava {background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px 14px; font-size:14px; color:#166534; display:flex; align-items:center; gap:8px;}
+        #toasts {position:fixed; bottom:20px; left:0; right:0; z-index:300; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;}
+        .toast {min-width:220px; max-width:90%; background:#1e293b; color:#fff; padding:14px 20px; border-radius:12px; font-size:14px; font-weight:600; box-shadow:0 4px 20px rgba(0,0,0,0.25); display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(20px); transition:0.25s;}
+        .toast.mostrar {opacity:1; transform:translateY(0);}
+        .toast.sucesso {background:linear-gradient(135deg,#2E7D32,#388E3C);}
+        .toast.erro {background:linear-gradient(135deg,#C62828,#D32F2F);}
+        .toast.info {background:linear-gradient(135deg,#0D47A1,#1976D2);}
+        .item-venda-recente {padding:12px 0; border-bottom:1px solid #f1f5f9; font-size:14px;}
+        .item-venda-recente:last-child {border-bottom:none;}
+        .detalhe {font-size:13px; color:#64748b;}
+        .tela-login {position:fixed; inset:0; z-index:900; background:linear-gradient(135deg,#1B5E20,#2E7D32); display:flex; align-items:center; justify-content:center; padding:24px;}
+        .tela-login.oculto {display:none;}
+        .caixa-login {background:#fff; border-radius:20px; padding:32px 24px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.3);}
+        .caixa-login h1 {font-size:20px; font-weight:800; color:var(--cor-principal); text-align:center; margin-bottom:4px;}
+        .caixa-login p {text-align:center; color:#64748b; font-size:13px; margin-bottom:20px;}
+        .caixa-login input {width:100%; padding:13px; margin-bottom:12px; border:1.5px solid var(--cor-borda); border-radius:10px; font-size:15px;}
+        .caixa-login .erro-login {color:#C62828; font-size:13px; text-align:center; min-height:18px; margin-bottom:6px;}
+        .oculto {display:none;}
+    </style>
+</head>
+<body>
+<div class="tela-login" id="telaLogin">
+    <div class="caixa-login">
+        <h1>🔒 LOJA — VENDAS</h1>
+        <p>Entre com o login que a matriz criou pra você</p>
+        <div class="erro-login" id="erroLogin"></div>
+        <input type="email" id="login-email" placeholder="E-mail" autocomplete="username">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button class="btn btn-sucesso" onclick="fazerLogin()" id="btn-login">Entrar</button>
+    </div>
+</div>
+<div id="appConteudo" class="oculto">
+<div id="toasts"></div>
+<header>
+    <div>
+        <div class="font-bold text-lg">🛍️ LOJA — VENDAS</div>
+        <div class="text-xs opacity-90">Conectado à matriz</div>
+    </div>
+    <span class="text-xs" id="status">🔄 Conectando...</span>
+</header>
+<div class="banner-offline" id="bannerOffline">⚠️ Sem conexão com a matriz agora — verifique a internet antes de vender, para o estoque não ficar desatualizado.</div>
+<div class="banner-offline hidden" id="indicador-pendencias" style="background:#fbbf24;color:#78350f;"></div>
+
+<div class="conteudo">
+    <div class="card">
+        <h2 class="text-xl font-bold text-[#2E7D32] mb-2">🛒 Nova Venda</h2>
+
+        <div class="secao-titulo">👤 Dados do Cliente</div>
+        <label class="campo">Nome completo *</label>
+        <input type="text" id="cli-nome" list="lista-clientes" placeholder="Ex: Maria da Silva Souza" required oninput="tentarPreencherCliente()">
+        <datalist id="lista-clientes"></datalist>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Apelido</label>
+                <input type="text" id="cli-apelido" placeholder="Como você chama ela(e)">
+            </div>
+            <div class="col">
+                <label class="campo">WhatsApp *</label>
+                <input type="tel" id="cli-tel" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTelefone(this)">
+            </div>
+        </div>
+
+        <div class="secao-titulo">📍 Endereço para Cobrança</div>
+        <div class="linha">
+            <div class="col" style="flex:2;">
+                <label class="campo">Rua / Avenida</label>
+                <input type="text" id="cli-rua" placeholder="Ex: Rua das Flores">
+            </div>
+            <div class="col-sm">
+                <label class="campo">Número</label>
+                <input type="text" id="cli-numero" placeholder="Nº">
+            </div>
+        </div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Bairro</label>
+                <input type="text" id="cli-bairro" placeholder="Bairro">
+            </div>
+            <div class="col">
+                <label class="campo">Cidade</label>
+                <input type="text" id="cli-cidade" placeholder="Cidade">
+            </div>
+        </div>
+
+        <div class="secao-titulo">🛍️ Produto (estoque da matriz)</div>
+        <select id="produto-venda" onchange="atualizarDadosProduto()"></select>
+        <p id="info-prod" class="text-green-700 font-medium mt-1"></p>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Quantidade</label>
+                <input type="number" id="qtd-venda" value="1" min="1">
+            </div>
+            <div class="col" style="display:flex; align-items:flex-end;">
+                <button type="button" class="btn btn-sucesso" style="margin:0;" onclick="adicionarAoCarrinho()">🛒 Adicionar</button>
+            </div>
+        </div>
+
+        <div id="carrinho-container"></div>
+
+        <div class="secao-titulo mt-2">💳 Pagamento</div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Forma de pagamento</label>
+                <select id="tipo-pagamento" onchange="mostrarCamposPrazo()">
+                    <option value="vista">💵 À VISTA</option>
+                    <option value="30">📅 A PRAZO — 30 DIAS</option>
+                    <option value="60">📅 A PRAZO — 60 DIAS</option>
+                    <option value="com-entrada">💰 COM ENTRADA + SALDO</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="bloco-prazo" class="hidden">
+            <div class="linha">
+                <div class="col">
+                    <label class="campo">Data da venda</label>
+                    <input type="date" id="data-venda" readonly>
+                </div>
+                <div class="col">
+                    <label class="campo">Data de vencimento</label>
+                    <input type="date" id="data-vencimento">
+                </div>
+            </div>
+        </div>
+        <input type="number" id="valor-entrada" placeholder="Valor da entrada R$" class="hidden" step="0.01" oninput="calcularValor()">
+
+        <div class="secao-titulo">🏷️ Desconto (opcional)</div>
+        <div class="linha">
+            <div class="col">
+                <label class="campo">Tipo de desconto</label>
+                <select id="desconto-tipo" onchange="calcularValor()">
+                    <option value="nenhum">Sem desconto</option>
+                    <option value="valor">R$ (valor fixo)</option>
+                    <option value="percentual">% (porcentagem)</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="campo">Valor do desconto</label>
+                <input type="number" id="desconto-valor" value="0" min="0" step="0.01" oninput="calcularValor()">
+            </div>
+        </div>
+
+        <div class="preco-trava mt-2">
+            🔒 <span>Preço definido pela matriz — não pode ser alterado aqui.</span>
+        </div>
+        <p class="text-sm text-gray-600 mt-2" id="resumo-subtotal"></p>
+        <p class="text-xl font-bold text-green-700 mt-2">Valor Total: R$ <span id="valor-final">0,00</span></p>
+        <p id="resumo-saldo" class="text-sm text-purple-700 font-medium hidden"></p>
+        <textarea id="obs" placeholder="Observação: combinado com o cliente, forma de pagamento do saldo..."></textarea>
+        <button class="btn btn-sucesso mt-4" id="btn-concluir-venda" onclick="concluirVenda()">✅ CONCLUIR VENDA E BAIXAR DO ESTOQUE</button>
+    </div>
+
+    <div class="card">
+        <h3 class="font-bold mb-2">💠 Pix da loja (para receber pagamento)</h3>
+        <p class="detalhe mb-2">Cadastrado pela matriz — aqui é só pra usar, não dá pra editar.</p>
+        <div id="lista-pix-vendedor"></div>
+    </div>
+
+    <div class="card">
+        <h3 class="font-bold mb-2">🧾 Últimas vendas registradas</h3>
+        <p class="detalhe mb-2">Só para conferência — aqui não dá pra editar nem excluir.</p>
+        <div id="lista-recentes"></div>
+    </div>
+    <div class="card">
+        <button class="btn btn-cancelar" onclick="sair()">🚪 Sair</button>
+    </div>
+</div>
+</div>
+
+<div class="modal-confirmar oculto" id="modalPix">
+    <div class="modal-caixa" style="max-width:340px;">
+        <div class="secao-titulo" style="justify-content:center;">💠 Pagamento via Pix</div>
+        <p class="detalhe" id="pixNomeRecebedor" style="text-align:center; margin-bottom:8px;"></p>
+        <label class="campo">Valor (opcional)</label>
+        <input type="number" step="0.01" id="pix-valor-modal" placeholder="Deixe em branco pra digitar no banco" oninput="gerarQrPixAgora()">
+        <div id="pix-qr-container" style="display:flex; justify-content:center; align-items:center; min-height:180px; margin:10px 0;"></div>
+        <label class="campo">Código Pix Copia e Cola</label>
+        <textarea id="pix-codigo-texto" readonly rows="3" style="font-size:11px;"></textarea>
+        <button class="btn btn-sucesso" onclick="copiarCodigoPix()">📋 Copiar código</button>
+        <button class="btn btn-cancelar mt-2" onclick="fecharModalPix()">Fechar</button>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDsQvFPzupHPo5a-Q_g16NICy03U54ly24",
+    authDomain: "loja-rn-modas.firebaseapp.com",
+    projectId: "loja-rn-modas",
+    storageBucket: "loja-rn-modas.firebasestorage.app",
+    messagingSenderId: "834153556948",
+    appId: "1:834153556948:web:49c1cb68dac612beee4441"
+};
+
+let dados = { estoque: [], vendas: [], pixChaves: [] };
+let carrinho = [];
+let db = null;
+let pixIdAtual = null;
+
+try {
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    }
+} catch (e) {
+    db = null;
+}
+
+// ---------- Login (Firebase Authentication) ----------
+function fazerLogin(){
+    let email = document.getElementById('login-email').value.trim();
+    let senha = document.getElementById('login-senha').value;
+    let erroEl = document.getElementById('erroLogin');
+    erroEl.textContent = '';
+    if(!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; return; }
+    if (typeof firebase === 'undefined' || !firebase.auth) { erroEl.textContent = 'Sem conexão — não é possível entrar agora.'; return; }
+    let btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+        .catch(e=>{
+            let msgs = {
+                'auth/invalid-email':'E-mail inválido.',
+                'auth/user-not-found':'Não existe login com esse e-mail. Peça pra matriz criar seu acesso.',
+                'auth/wrong-password':'Senha incorreta.',
+                'auth/invalid-credential':'E-mail ou senha incorretos.',
+                'auth/too-many-requests':'Muitas tentativas erradas. Espere um pouco e tente de novo.'
+            };
+            erroEl.textContent = msgs[e.code] || 'Não foi possível entrar. Tente novamente.';
+        })
+        .finally(()=>{ btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function sair(){
+    if(firebase.auth) firebase.auth().signOut();
+}
+
+let appJaIniciado = false;
+if (typeof firebase !== 'undefined' && firebase.auth) {
+    firebase.auth().onAuthStateChanged(user=>{
+        if(user){
+            document.getElementById('telaLogin').classList.add('oculto');
+            document.getElementById('appConteudo').classList.remove('oculto');
+            if(!appJaIniciado){ appJaIniciado = true; iniciarApp(); }
+        } else {
+            document.getElementById('appConteudo').classList.add('oculto');
+            document.getElementById('telaLogin').classList.remove('oculto');
+        }
+    });
+}
+
+function mostrarToast(msg, tipo='sucesso'){
+    let icones = {sucesso:'✅', erro:'⚠️', info:'ℹ️'};
+    let el = document.createElement('div');
+    el.className = `toast ${tipo}`;
+    el.innerHTML = `<span>${icones[tipo]||icones.sucesso}</span><span>${msg}</span>`;
+    document.getElementById('toasts').appendChild(el);
+    requestAnimationFrame(()=>el.classList.add('mostrar'));
+    setTimeout(()=>{ el.classList.remove('mostrar'); setTimeout(()=>el.remove(), 300); }, 3200);
+}
+
+function definirStatusConexao(ok){
+    document.getElementById('status').textContent = ok ? '🟢 Online' : '🔴 Sem conexão';
+    document.getElementById('bannerOffline').classList.toggle('mostrar', !ok);
+}
+
+function marcarInvalido(id){
+    let el = document.getElementById(id);
+    el.classList.add('campo-invalido');
+    el.focus();
+    setTimeout(()=>el.classList.remove('campo-invalido'), 1600);
+}
+
+function mascaraTelefone(campo){
+    let v = campo.value.replace(/\D/g,'').slice(0,11);
+    if(v.length>10) v = v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+    else if(v.length>6) v = v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
+    else if(v.length>2) v = v.replace(/(\d{2})(\d{0,5})/,'($1) $2');
+    else if(v.length>0) v = v.replace(/(\d{0,2})/,'($1');
+    campo.value = v;
+}
+
+function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Memória de clientes (preenchimento automático) ----------
+// Aproveita os dados de cliente que já vêm em cada venda (de qualquer vendedor ou da
+// matriz, já que todos compartilham o mesmo documento central) para sugerir o nome
+// e preencher os outros campos sozinho quando o cliente já comprou antes.
+function listaClientesUnicos(){
+    let porChave = {};
+    (dados.vendas||[]).slice().sort((a,b)=>a.id-b.id).forEach(v=>{
+        if(!v.cliente || !v.cliente.nome) return;
+        let chave = (v.cliente.telefone || v.cliente.nome).toLowerCase().trim();
+        porChave[chave] = v.cliente;
+    });
+    return Object.values(porChave);
+}
+
+function renderizarListaClientesDatalist(){
+    let el = document.getElementById('lista-clientes');
+    if(!el) return;
+    let clientes = listaClientesUnicos();
+    el.innerHTML = clientes.map(c=>`<option value="${escapeHtml(c.nome)}">`).join('');
+}
+
+function tentarPreencherCliente(){
+    let nomeDigitado = document.getElementById('cli-nome').value.trim().toLowerCase();
+    if(!nomeDigitado) return;
+    let cliente = listaClientesUnicos().find(c=>c.nome.trim().toLowerCase()===nomeDigitado);
+    if(!cliente) return;
+    document.getElementById('cli-apelido').value = cliente.apelido || '';
+    document.getElementById('cli-tel').value = cliente.telefone || '';
+    document.getElementById('cli-rua').value = cliente.rua || '';
+    document.getElementById('cli-numero').value = cliente.numero || '';
+    document.getElementById('cli-bairro').value = cliente.bairro || '';
+    document.getElementById('cli-cidade').value = cliente.cidade || '';
+    mostrarToast(`Dados de ${cliente.nome} preenchidos automaticamente (cliente já cadastrado).`, 'info');
+}
+
+function hojeISO(){
+    let d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0,10);
+}
+
+function mostrarCamposPrazo(){
+    let tipo = document.getElementById('tipo-pagamento').value;
+    let ehPrazo = tipo!=='vista';
+    document.getElementById('bloco-prazo').classList.toggle('hidden', !ehPrazo);
+    document.getElementById('valor-entrada').classList.toggle('hidden', tipo!=='com-entrada');
+    document.getElementById('resumo-saldo').classList.toggle('hidden', tipo!=='com-entrada');
+    if(ehPrazo){
+        document.getElementById('data-venda').value = hojeISO();
+        let dias = tipo==='30' ? 30 : tipo==='60' ? 60 : 30;
+        let venc = new Date();
+        venc.setDate(venc.getDate() + dias);
+        venc.setMinutes(venc.getMinutes() - venc.getTimezoneOffset());
+        document.getElementById('data-vencimento').value = venc.toISOString().slice(0,10);
+    }
+    calcularValor();
+}
+
+function atualizarDadosProduto(){
+    let id = document.getElementById('produto-venda').value;
+    let p = dados.estoque.find(i=>i.id==id);
+    if(p) {
+        document.getElementById('info-prod').textContent = `Disponível: ${p.quantidade} peças | R$ ${p.precoUnitario.toFixed(2)} cada`;
+    }
+}
+
+// Junta itens iguais no carrinho (mesmo produto), respeitando o estoque disponível
+function adicionarAoCarrinho(){
+    let id = document.getElementById('produto-venda').value;
+    let qtd = Number(document.getElementById('qtd-venda').value);
+    if(!id) return mostrarToast('Selecione um produto.', 'erro');
+    if(!qtd || qtd < 1) return mostrarToast('Informe uma quantidade válida.', 'erro');
+
+    let p = dados.estoque.find(i=>i.id==id);
+    if(!p) return mostrarToast('Produto não encontrado no estoque.', 'erro');
+
+    let itemExistente = carrinho.find(i=>i.idProduto==id);
+    let qtdJaNoCarrinho = itemExistente ? itemExistente.quantidade : 0;
+    if(qtd + qtdJaNoCarrinho > p.quantidade){
+        return mostrarToast(`Só tem ${p.quantidade} peças desse produto em estoque (você já tem ${qtdJaNoCarrinho} no carrinho).`, 'erro');
+    }
+
+    if(itemExistente){
+        itemExistente.quantidade += qtd;
+    } else {
+        carrinho.push({
+            idProduto: id,
+            descricao: `${p.tipo} — ${p.descricao} ${p.tamanho}`,
+            quantidade: qtd,
+            precoUnitario: p.precoUnitario
+        });
+    }
+    document.getElementById('qtd-venda').value = 1;
+    renderizarCarrinho();
+    calcularValor();
+}
+
+function removerDoCarrinho(idProduto){
+    carrinho = carrinho.filter(i=>i.idProduto != idProduto);
+    renderizarCarrinho();
+    calcularValor();
+}
+
+function renderizarCarrinho(){
+    let container = document.getElementById('carrinho-container');
+    if(!container) return;
+    if(carrinho.length===0){
+        container.innerHTML = `<p class="detalhe mt-1">🛒 Carrinho vazio — adicione ao menos um produto.</p>`;
+        return;
+    }
+    container.innerHTML = carrinho.map(i=>`
+        <div class="item-carrinho">
+            <div>
+                <b>${i.descricao}</b>
+                <div class="detalhe">Qtd: ${i.quantidade} × R$ ${i.precoUnitario.toFixed(2)} = R$ ${(i.quantidade*i.precoUnitario).toFixed(2)}</div>
+            </div>
+            <button type="button" class="btn-remover-item" onclick="removerDoCarrinho('${i.idProduto}')" title="Remover">✕</button>
+        </div>`).join('');
+}
+
+function subtotalCarrinho(){
+    return carrinho.reduce((soma,i)=> soma + i.quantidade*i.precoUnitario, 0);
+}
+
+// Calcula o valor total já aplicando o desconto (em R$ ou %), sem deixar passar de 0 nem do subtotal
+function calcularTotalComDesconto(subtotal){
+    let tipoDesc = document.getElementById('desconto-tipo') ? document.getElementById('desconto-tipo').value : 'nenhum';
+    let valorDesc = Number(document.getElementById('desconto-valor') ? document.getElementById('desconto-valor').value : 0) || 0;
+    let desconto = 0;
+    if(tipoDesc === 'valor') desconto = valorDesc;
+    else if(tipoDesc === 'percentual') desconto = subtotal * (valorDesc/100);
+    desconto = Math.max(0, Math.min(desconto, subtotal));
+    return { total: subtotal - desconto, desconto, tipoDesc, valorDesc };
+}
+
+function calcularValor(){
+    let subtotal = subtotalCarrinho();
+
+    let { total, desconto } = calcularTotalComDesconto(subtotal);
+    document.getElementById('valor-final').textContent = total.toFixed(2);
+
+    let elSubtotal = document.getElementById('resumo-subtotal');
+    if(elSubtotal){
+        elSubtotal.textContent = desconto > 0
+            ? `Subtotal: R$ ${subtotal.toFixed(2)} — Desconto: R$ ${desconto.toFixed(2)}`
+            : '';
+    }
+
+    let tipo = document.getElementById('tipo-pagamento').value;
+    if(tipo==='com-entrada'){
+        let entrada = Number(document.getElementById('valor-entrada').value) || 0;
+        let saldo = total - entrada;
+        document.getElementById('resumo-saldo').textContent = `Entrada: R$ ${entrada.toFixed(2)} | Saldo a receber no vencimento: R$ ${saldo.toFixed(2)}`;
+    }
+}
+
+function limparFormVenda(){
+    ['cli-nome','cli-apelido','cli-tel','cli-rua','cli-numero','cli-bairro','cli-cidade','obs','valor-entrada']
+        .forEach(id=>document.getElementById(id).value='');
+    document.getElementById('qtd-venda').value = 1;
+    document.getElementById('tipo-pagamento').selectedIndex = 0;
+    document.getElementById('desconto-tipo').selectedIndex = 0;
+    document.getElementById('desconto-valor').value = 0;
+    carrinho = [];
+    renderizarCarrinho();
+    mostrarCamposPrazo();
+    document.getElementById('cli-nome').focus();
+}
+
+// Registra a baixa de estoque + a venda de forma segura contra duas vendas ao mesmo tempo.
+// Quando conectado, usa uma TRANSAÇÃO: busca o estoque mais atual na hora de gravar, e o
+// PREÇO usado é sempre o que está cadastrado na matriz nesse instante — o vendedor não digita preço.
+// Registra uma venda com vários itens (carrinho) numa transação só: ou baixa o estoque de
+// TODOS os produtos, ou não baixa de nenhum — evita ficar com venda "pela metade".
+function registrarVendaSeguraCarrinho(itensCarrinho, montarVenda, aoTerminar){
+    if(!db){
+        registrarVendaOffline(itensCarrinho, montarVenda, aoTerminar,
+            'Sem conexão com a matriz. Conecte-se à internet para vender — o preço e o estoque precisam vir de lá.');
+        return;
+    }
+    let ref = db.collection('lojaDados').doc('principal');
+    db.runTransaction(transacao => transacao.get(ref).then(doc=>{
+        let atuais = doc.exists ? doc.data() : {estoque:[], vendas:[]};
+        atuais.estoque = atuais.estoque || [];
+        atuais.vendas = atuais.vendas || [];
+        let produtosAtuais = [];
+        for(let item of itensCarrinho){
+            let prod = atuais.estoque.find(i=>i.id==item.idProduto);
+            if(!prod || prod.quantidade < item.quantidade){
+                throw new Error(`ESTOQUE_INSUFICIENTE:${item.descricao}:${prod ? prod.quantidade : 0}`);
+            }
+            produtosAtuais.push(prod);
+        }
+        // Só baixa o estoque depois de confirmar que TODOS os itens têm quantidade suficiente
+        itensCarrinho.forEach((item,i)=>{ produtosAtuais[i].quantidade -= item.quantidade; });
+        let venda = montarVenda(produtosAtuais);
+        atuais.vendas.push(venda);
+        transacao.set(ref, atuais);
+        return {atuais, venda};
+    })).then(({atuais, venda})=>{
+        dados = atuais;
+        atualizarTela();
+        definirStatusConexao(true);
+        aoTerminar(true, venda);
+    }).catch(erro=>{
+        let msg = String((erro && erro.message) || erro);
+        if(msg.indexOf('ESTOQUE_INSUFICIENTE')===0){
+            let partes = msg.split(':');
+            aoTerminar(false, `"${partes[1]}" já não tem mais peças suficientes (outra venda levou primeiro). Só tem ${partes[2]} agora.`);
+        } else {
+            definirStatusConexao(false);
+            registrarVendaOffline(itensCarrinho, montarVenda, aoTerminar, null);
+        }
+    });
+}
+
+// ---------- Venda offline (vendedor) ----------
+// Usa o último estoque conhecido neste aparelho (a última vez que recebeu dados da
+// matriz) pra registrar a venda localmente, marcada como "pendente de sincronização".
+// Guardado com chaves PRÓPRIAS (diferentes do app da matriz), já que os dois sites
+// ficam no mesmo domínio e não podem misturar os dados salvos no aparelho.
+function registrarVendaOffline(itensCarrinho, montarVenda, aoTerminar, msgSemDadosLocais){
+    if(!dados.estoque || dados.estoque.length===0){
+        aoTerminar(false, msgSemDadosLocais || 'Sem conexão e sem dados de estoque salvos neste aparelho ainda. Abra o app pelo menos uma vez com internet antes de vender offline.');
+        return;
+    }
+    for(let item of itensCarrinho){
+        let prod = dados.estoque.find(i=>i.id==item.idProduto);
+        if(!prod || prod.quantidade < item.quantidade){
+            aoTerminar(false, `Sem internet e "${item.descricao}" não tem estoque suficiente (segundo os últimos dados salvos) para vender mesmo offline.`);
+            return;
+        }
+    }
+    let produtosAtuais = itensCarrinho.map(item=>{
+        let prod = dados.estoque.find(i=>i.id==item.idProduto);
+        prod.quantidade -= item.quantidade;
+        return prod;
+    });
+    let venda = montarVenda(produtosAtuais);
+    venda.pendenteSincronizar = true;
+    dados.vendas.push(venda);
+    atualizarTela();
+    localStorage.setItem('dadosLojaVendedorCache', JSON.stringify(dados));
+    let fila = JSON.parse(localStorage.getItem('filaSincronizacaoVendedor') || '[]');
+    fila.push({ itensCarrinho, venda });
+    localStorage.setItem('filaSincronizacaoVendedor', JSON.stringify(fila));
+    atualizarIndicadorPendencias();
+    aoTerminar(true, venda);
+}
+
+function atualizarIndicadorPendencias(){
+    let el = document.getElementById('indicador-pendencias');
+    if(!el) return;
+    let n = JSON.parse(localStorage.getItem('filaSincronizacaoVendedor') || '[]').length;
+    if(n===0){ el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.style.display = 'block';
+    el.textContent = `⏳ ${n} venda${n>1?'s':''} feita${n>1?'s':''} offline aguardando internet para sincronizar`;
+}
+
+let sincronizandoFilaVendedor = false;
+function sincronizarFilaPendenteVendedor(){
+    if(sincronizandoFilaVendedor || !db) return;
+    let fila = JSON.parse(localStorage.getItem('filaSincronizacaoVendedor') || '[]');
+    if(fila.length===0) return;
+    sincronizandoFilaVendedor = true;
+    let item = fila[0];
+    let ref = db.collection('lojaDados').doc('principal');
+    db.runTransaction(transacao => transacao.get(ref).then(doc=>{
+        let atuais = doc.exists ? doc.data() : {estoque:[], vendas:[]};
+        atuais.estoque = atuais.estoque || [];
+        atuais.vendas = atuais.vendas || [];
+        if(atuais.vendas.some(v=>v.id===item.venda.id)){ return {atuais, jaExistia:true}; }
+        for(let it of item.itensCarrinho){
+            let prod = atuais.estoque.find(i=>i.id==it.idProduto);
+            if(!prod || prod.quantidade < it.quantidade){
+                throw new Error(`ESTOQUE_INSUFICIENTE_SYNC`);
+            }
+        }
+        item.itensCarrinho.forEach(it=>{
+            let prod = atuais.estoque.find(i=>i.id==it.idProduto);
+            prod.quantidade -= it.quantidade;
+        });
+        let vendaSync = {...item.venda};
+        delete vendaSync.pendenteSincronizar;
+        atuais.vendas.push(vendaSync);
+        transacao.set(ref, atuais);
+        return {atuais, jaExistia:false};
+    })).then(({atuais})=>{
+        dados = atuais;
+        atualizarTela();
+        definirStatusConexao(true);
+        let filaAtual = JSON.parse(localStorage.getItem('filaSincronizacaoVendedor') || '[]');
+        filaAtual.shift();
+        localStorage.setItem('filaSincronizacaoVendedor', JSON.stringify(filaAtual));
+        atualizarIndicadorPendencias();
+        sincronizandoFilaVendedor = false;
+        mostrarToast('Venda pendente sincronizada com sucesso.', 'sucesso');
+        sincronizarFilaPendenteVendedor();
+    }).catch(erro=>{
+        sincronizandoFilaVendedor = false;
+        let msg = String((erro && erro.message) || erro);
+        if(msg.indexOf('ESTOQUE_INSUFICIENTE_SYNC')>=0){
+            let filaAtual = JSON.parse(localStorage.getItem('filaSincronizacaoVendedor') || '[]');
+            let conflituosa = filaAtual.shift();
+            localStorage.setItem('filaSincronizacaoVendedor', JSON.stringify(filaAtual));
+            let v = dados.vendas.find(x=>x.id===conflituosa.venda.id);
+            if(v){ v.pendenteSincronizar = false; v.conflitoSincronizacao = true; }
+            atualizarTela();
+            atualizarIndicadorPendencias();
+            mostrarToast('Uma venda feita offline não pôde ser sincronizada: o estoque acabou enquanto o aparelho estava sem internet. Avise a matriz para conferir essa venda.', 'erro');
+        }
+    });
+}
+window.addEventListener('online', sincronizarFilaPendenteVendedor);
+setInterval(sincronizarFilaPendenteVendedor, 20000);
+
+function concluirVenda(){
+    let nome = document.getElementById('cli-nome').value.trim();
+    let tel = document.getElementById('cli-tel').value.trim();
+    if(!nome) return (marcarInvalido('cli-nome'), mostrarToast('Informe o nome completo do cliente.', 'erro'));
+    if(!tel) return (marcarInvalido('cli-tel'), mostrarToast('Informe o WhatsApp do cliente.', 'erro'));
+
+    if(carrinho.length===0) return mostrarToast('Adicione ao menos um produto ao carrinho antes de concluir a venda.', 'erro');
+
+    let tipoPag = document.getElementById('tipo-pagamento').value;
+
+    let dataVendaISO = tipoPag==='vista' ? hojeISO() : document.getElementById('data-venda').value;
+    let dataVencISO = tipoPag==='vista' ? null : document.getElementById('data-vencimento').value;
+    if(tipoPag!=='vista' && !dataVencISO) return (marcarInvalido('data-vencimento'), mostrarToast('Informe a data de vencimento.', 'erro'));
+
+    let textoVenc = tipoPag==='vista' ? 'À VISTA' : new Date(dataVencISO+'T00:00:00').toLocaleDateString('pt-BR');
+    let cliente = {
+        nome: nome,
+        apelido: document.getElementById('cli-apelido').value.trim(),
+        telefone: tel,
+        rua: document.getElementById('cli-rua').value.trim(),
+        numero: document.getElementById('cli-numero').value.trim(),
+        bairro: document.getElementById('cli-bairro').value.trim(),
+        cidade: document.getElementById('cli-cidade').value.trim()
+    };
+    let observacao = document.getElementById('obs').value;
+
+    let btn = document.getElementById('btn-concluir-venda');
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Registrando...'; }
+
+    // Lê o desconto e o carrinho ANTES de mandar pra matriz (o formulário é limpo assim que a venda é confirmada)
+    let descontoTipo = document.getElementById('desconto-tipo').value;
+    let descontoValorDigitado = Number(document.getElementById('desconto-valor').value) || 0;
+    let itensPedido = carrinho.map(i=>({...i}));
+
+    registrarVendaSeguraCarrinho(itensPedido, (produtosAtuais)=>{
+        // Preço de cada item vem sempre do estoque da matriz no momento de gravar — nunca digitado na hora
+        let itensFinais = itensPedido.map((item,i)=>({
+            idProduto: item.idProduto,
+            descricao: `${produtosAtuais[i].tipo} — ${produtosAtuais[i].descricao} ${produtosAtuais[i].tamanho}`,
+            quantidade: item.quantidade,
+            precoUnitario: produtosAtuais[i].precoUnitario,
+            subtotal: item.quantidade * produtosAtuais[i].precoUnitario
+        }));
+        let subtotal = itensFinais.reduce((s,i)=>s+i.subtotal, 0);
+        let descontoAplicado = 0;
+        if(descontoTipo === 'valor') descontoAplicado = descontoValorDigitado;
+        else if(descontoTipo === 'percentual') descontoAplicado = subtotal * (descontoValorDigitado/100);
+        descontoAplicado = Math.max(0, Math.min(descontoAplicado, subtotal));
+        let valorTotal = subtotal - descontoAplicado;
+
+        let qtdTotal = itensFinais.reduce((s,i)=>s+i.quantidade, 0);
+        let valorEntrada = tipoPag==='com-entrada' ? (Number(document.getElementById('valor-entrada').value)||0) : 0;
+        return {
+            id: Date.now(),
+            cliente: cliente,
+            itens: itensFinais,
+            produto: itensFinais.map(i=>`${i.descricao} (x${i.quantidade})`).join(', '),
+            quantidade: qtdTotal,
+            valorSubtotal: subtotal,
+            desconto: descontoAplicado,
+            valorTotal: valorTotal,
+            valorEntrada: valorEntrada,
+            valorPago: valorEntrada,
+            pagamentos: valorEntrada>0 ? [{data: hojeISO(), valor: valorEntrada}] : [],
+            tipoPagamento: tipoPag,
+            dataVenda: dataVendaISO,
+            dataVencimento: dataVencISO,
+            textoVencimento: textoVenc,
+            observacao: observacao,
+            origemTipo: 'vendedor',
+            origemEmail: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.email : null
+        };
+    }, (sucesso, resultado)=>{
+        if(btn){ btn.disabled = false; btn.innerHTML = '✅ CONCLUIR VENDA E BAIXAR DO ESTOQUE'; }
+        if(sucesso){
+            if(resultado.pendenteSincronizar){
+                mostrarToast(`Venda registrada OFFLINE: R$ ${resultado.valorTotal.toFixed(2)} — vencimento ${textoVenc}. Vai sincronizar sozinha quando a internet voltar.`, 'info');
+            } else {
+                mostrarToast(`Venda registrada: R$ ${resultado.valorTotal.toFixed(2)} — vencimento ${textoVenc}.`, 'sucesso');
+            }
+            limparFormVenda();
+        } else {
+            mostrarToast(resultado, 'erro');
+        }
+    });
+}
+
+// ---------- Pix (somente leitura — as chaves só podem ser cadastradas/editadas na matriz) ----------
+function rotuloTipoPix(tipo){
+    return {telefone:'Telefone', cpf:'CPF', cnpj:'CNPJ', email:'E-mail', aleatoria:'Chave aleatória'}[tipo] || tipo;
+}
+
+function mascaraChavePix(p){
+    if(p.tipo==='telefone'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length>=10) return `(${d.slice(-11,-9)}) ${d.slice(-9,-4)}-${d.slice(-4)}`;
+    }
+    if(p.tipo==='cnpj'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length===14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    if(p.tipo==='cpf'){
+        let d = p.chave.replace(/\D/g,'');
+        if(d.length===11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return p.chave;
+}
+
+// Tira acentos/caracteres especiais — o padrão do Pix só aceita letras sem acento, números e espaço
+function textoPix(txt, tamanhoMax){
+    let limpo = (txt||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();
+    return (limpo.substring(0, tamanhoMax)) || 'NAO INFORMADO';
+}
+
+function formatarChavePixParaPayload(p){
+    let bruto = (p.chave||'').trim();
+    if(p.tipo==='telefone'){
+        let d = bruto.replace(/\D/g,'');
+        if(d.startsWith('55') && d.length>11) return '+'+d;
+        return '+55'+d;
+    }
+    if(p.tipo==='cpf' || p.tipo==='cnpj') return bruto.replace(/\D/g,'');
+    if(p.tipo==='email') return bruto.toLowerCase();
+    return bruto; // chave aleatória: usa como digitada
+}
+
+// CRC16/CCITT-FALSE — exigido pelo padrão do Banco Central pra fechar o código Pix
+function crc16Pix(payload){
+    let polinomio = 0x1021, resultado = 0xFFFF;
+    for(let i=0; i<payload.length; i++){
+        resultado ^= (payload.charCodeAt(i) << 8);
+        for(let b=0; b<8; b++){
+            resultado = (resultado & 0x8000) ? ((resultado<<1) ^ polinomio) & 0xFFFF : (resultado<<1) & 0xFFFF;
+        }
+    }
+    return resultado.toString(16).toUpperCase().padStart(4,'0');
+}
+
+function tlvPix(id, valor){
+    return id + String(valor.length).padStart(2,'0') + valor;
+}
+
+// Monta o código "Pix Copia e Cola" (padrão BR Code do Banco Central) a partir da chave e, opcionalmente, um valor fixo
+function montarPayloadPix(p, valor){
+    let gui = tlvPix('00','BR.GOV.BCB.PIX');
+    let chaveTlv = tlvPix('01', formatarChavePixParaPayload(p));
+    let mai = tlvPix('26', gui + chaveTlv);
+    let nome = textoPix(p.nome, 25);
+    let cidade = textoPix(p.cidade, 15);
+    let valorNum = Number(valor);
+    let partes =
+        tlvPix('00','01') +
+        tlvPix('01','11') +
+        mai +
+        tlvPix('52','0000') +
+        tlvPix('53','986') +
+        (valorNum > 0 ? tlvPix('54', valorNum.toFixed(2)) : '') +
+        tlvPix('58','BR') +
+        tlvPix('59', nome) +
+        tlvPix('60', cidade) +
+        tlvPix('62', tlvPix('05','***')) +
+        '6304';
+    return partes + crc16Pix(partes);
+}
+
+function abrirQrPix(id){
+    pixIdAtual = id;
+    let p = dados.pixChaves.find(x=>x.id===id);
+    if(!p) return;
+    document.getElementById('pixNomeRecebedor').textContent = `${p.nome} — ${rotuloTipoPix(p.tipo)}: ${mascaraChavePix(p)}`;
+    document.getElementById('pix-valor-modal').value = '';
+    document.getElementById('modalPix').classList.remove('oculto');
+    gerarQrPixAgora();
+}
+
+function fecharModalPix(){
+    document.getElementById('modalPix').classList.add('oculto');
+    pixIdAtual = null;
+}
+
+function gerarQrPixAgora(){
+    let p = dados.pixChaves.find(x=>x.id===pixIdAtual);
+    if(!p) return;
+    let valor = document.getElementById('pix-valor-modal').value;
+    let codigo = montarPayloadPix(p, valor);
+    document.getElementById('pix-codigo-texto').value = codigo;
+
+    let container = document.getElementById('pix-qr-container');
+    container.innerHTML = '';
+    if(typeof QRCode !== 'undefined'){
+        try {
+            new QRCode(container, { text: codigo, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+            return;
+        } catch(e){ /* se falhar, cai no aviso abaixo */ }
+    }
+    container.innerHTML = `<p class="detalhe" style="text-align:center;">Não consegui desenhar o QR Code agora (sem internet pra carregar o desenho) — mas o código abaixo funciona igual: copie e cole no seu banco.</p>`;
+}
+
+function copiarCodigoPix(){
+    let campo = document.getElementById('pix-codigo-texto');
+    campo.focus();
+    campo.select();
+    campo.setSelectionRange(0, 99999);
+    let copiado = false;
+    try {
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(campo.value);
+            copiado = true;
+        }
+    } catch(e){}
+    if(!copiado){
+        try { copiado = document.execCommand('copy'); } catch(e){}
+    }
+    mostrarToast(copiado ? 'Código Pix copiado! Agora é só colar no seu banco.' : 'Não consegui copiar sozinho — o texto já está selecionado, copie manualmente.', copiado ? 'sucesso' : 'info');
+}
+
+function renderizarPixVendedor(){
+    let lista = document.getElementById('lista-pix-vendedor');
+    if(!lista) return;
+    if(!dados.pixChaves || dados.pixChaves.length===0){
+        lista.innerHTML = `<div class="vazio">📭 A matriz ainda não cadastrou nenhuma chave Pix.</div>`;
+        return;
+    }
+    lista.innerHTML = dados.pixChaves.map(p=>`
+        <div class="item-pix-vendedor">
+            <div>
+                <b>${p.nome}</b>
+                <div class="detalhe">${rotuloTipoPix(p.tipo)}: ${mascaraChavePix(p)}</div>
+            </div>
+            <button class="btn btn-sucesso" onclick="abrirQrPix(${p.id})">💠 Ver QR</button>
+        </div>`).join('');
+}
+
+function atualizarTela(){
+    renderizarListaClientesDatalist();
+    atualizarIndicadorPendencias();
+    let selProd = document.getElementById('produto-venda');
+    let valorSelecionado = selProd.value;
+    selProd.innerHTML='';
+    dados.estoque.filter(p=>p.quantidade>0).forEach(p=>selProd.innerHTML += `<option value="${p.id}">${p.tipo} ${p.descricao} ${p.tamanho} — R$${p.precoUnitario.toFixed(2)}</option>`);
+    if(valorSelecionado && dados.estoque.some(p=>p.id==valorSelecionado && p.quantidade>0)) selProd.value = valorSelecionado;
+    atualizarDadosProduto();
+
+    // Últimas 10 vendas feitas por ESTE vendedor (não mostra vendas da matriz nem de outros vendedores)
+    let listaRecentes = document.getElementById('lista-recentes');
+    let meuEmail = (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.email : null;
+    let recentes = [...dados.vendas]
+        .filter(v => v.origemTipo === 'vendedor' && v.origemEmail === meuEmail)
+        .sort((a,b)=> b.id - a.id).slice(0, 10);
+    if(recentes.length===0){
+        listaRecentes.innerHTML = `<div class="vazio">📭 Nenhuma venda registrada por você ainda.</div>`;
+    } else {
+        listaRecentes.innerHTML = recentes.map(v=>`
+            <div class="item-venda-recente">
+                <b>${v.cliente.nome}</b> — R$ ${v.valorTotal.toFixed(2)}${v.desconto>0?` <span class="detalhe">(desconto R$ ${v.desconto.toFixed(2)})</span>`:''}${v.pendenteSincronizar?' <span class="detalhe" style="color:#b45309;font-weight:700;">⏳ offline, aguardando sincronizar</span>':''}
+                <div class="detalhe">${v.produto} — Qtd: ${v.quantidade} • ${v.tipoPagamento==='vista'?'À vista':'A prazo, vence '+v.textoVencimento}</div>
+            </div>`).join('');
+    }
+
+    renderizarPixVendedor();
+}
+
+function iniciarApp(){
+    renderizarCarrinho();
+    if (!db) {
+        definirStatusConexao(false);
+        mostrarToast('Não consegui conectar à matriz. Verifique a internet e abra o app de novo.', 'erro');
+        return;
+    }
+    db.collection('lojaDados').doc('principal').onSnapshot(
+        doc=>{
+            definirStatusConexao(true);
+            if(doc.exists) dados = doc.data();
+            dados.estoque = dados.estoque || [];
+            dados.vendas = dados.vendas || [];
+            dados.pixChaves = dados.pixChaves || [];
+            atualizarTela();
+        },
+        () => { definirStatusConexao(false); }
+    );
+}
+
+if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('sw-vendedor.js').catch(()=>{});
+    });
+}
+</script>
+</body>
+</html>
